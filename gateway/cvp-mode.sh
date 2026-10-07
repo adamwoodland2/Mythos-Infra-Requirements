@@ -20,12 +20,19 @@ case "$mode" in
   run|login)
     src="$SQUID_DIR/allowlist-$mode.txt"
     [[ -f "$src" ]] || { echo "missing $src" >&2; exit 1; }
+    prev="$(readlink -f "$ACTIVE")"
     ln -sfn "$src" "$ACTIVE"
-    squid -k parse >/dev/null
+    if ! squid -k parse >/dev/null; then
+      ln -sfn "$prev" "$ACTIVE"
+      echo "squid rejected $src; allow-list left as $prev" >&2
+      exit 1
+    fi
     squid -k reconfigure
     echo "$(date -Is) mode=$mode by=${SUDO_USER:-$USER}" >> "$LOG"
     echo "Squid allow-list now: $mode"
-    [[ "$mode" == "login" ]] && echo "REMEMBER: run 'sudo cvp-mode run' before starting any engagement."
+    if [[ "$mode" == "login" ]]; then
+      echo "REMEMBER: run 'sudo cvp-mode run' before starting any engagement."
+    fi
     ;;
   status)
     echo "Active allow-list -> $(readlink -f "$ACTIVE")"

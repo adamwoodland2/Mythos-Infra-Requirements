@@ -11,4 +11,6 @@ Conventions:
 - Anthropic requirements are from the two support articles linked in CHECKLIST.md
   §References; re-fetch them before changing anything that claims to be a requirement.
 - Config files are hand-written; nftables.conf passes `nft -c`, scripts pass `bash -n`,
-  settings.json parses. Squid and PowerShell have not been executed yet.
+  settings.json parses. squid.conf with both allow-lists passes `squid -k parse` and a
+  loopback CONNECT test on Squid 6.14 (Ubuntu 24.04 build). PowerShell has not been
+  executed yet.

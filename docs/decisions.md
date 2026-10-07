@@ -202,3 +202,18 @@ NAT before the adapter is moved.
 The files are the deliverable; a document that embeds them goes stale the
 moment one is edited. Markdown with relative links keeps one source of truth,
 diffs in git, and is readable by Claude Code when the repo is opened there.
+
+## D-015 Squid matches allow-list hostnames only (`dstdomain -n`)
+
+**Date:** 2026-10-07 · **Status:** active
+
+Found the first time squid.conf was actually run (Squid 6.14, Ubuntu 24.04
+build). Without `-n`, a CONNECT to a bare IP is reverse-resolved and allowed if
+the PTR record names a listed host. PTR records are set by whoever owns the IP,
+so any server could pass itself off as `api.anthropic.com`. In testing,
+`CONNECT 8.8.8.8:443` was tunnelled once `dns.google` was on the list; with
+`-n` the same request is `TCP_DENIED`. Claude Code always CONNECTs by hostname,
+so nothing legitimate needs the reverse lookup.
+
+`via off` is kept even though Squid 6 warns about it: without it, every 403
+sends `Via: 1.1 <gateway hostname> (squid/6.14)` back to the sandbox.

@@ -4,7 +4,8 @@
 
 # --- always ---
 api.anthropic.com
-platform.claude.com
+# platform.claude.com is covered by .claude.com below. Do not list it again:
+# Squid refuses to start if one entry is a subdomain of another.
 
 # --- OAuth browser sign-in (claude.com page redirects to claude.ai) ---
 .claude.ai

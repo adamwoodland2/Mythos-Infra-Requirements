@@ -114,6 +114,7 @@ Allow-list rationale (from the Claude Code network docs):
 - [ ] Connectivity checks from Kali:
   - `ping -c1 8.8.8.8` → *Network is unreachable* (no route)
   - `curl -sI https://example.com` → `403 Forbidden` from Squid
+  - `curl -skI https://8.8.8.8` → `403 Forbidden` from Squid (bare IPs never match the allow-list, see docs/decisions.md D-015)
   - `curl -sI https://api.anthropic.com` → an HTTP response from Anthropic (any status is fine; it proves the proxy path works)
   - `ping -c1 10.0.3.20` → Windows target reachable
 - [ ] **OAuth login:** on the gateway `sudo cvp-mode login`; on Kali run `claude`, complete `/login` in the browser (it goes through the proxy); back on the gateway `sudo cvp-mode run`. Confirm with `sudo cvp-mode status`.
