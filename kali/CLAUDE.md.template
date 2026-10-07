@@ -1,0 +1,46 @@
+# Engagement scope - <ENGAGEMENT NAME> - <DATE>
+
+Copy this file to the engagement working directory as `CLAUDE.md` and fill it in
+before starting Claude Code. Both Claude and the Auto Mode classifier read it.
+Phrase every constraint as an instruction ("do not"), never as a claim about the
+environment ("you cannot"), so it still holds if something is misconfigured.
+
+## Authorisation
+
+This is authorised security testing by <YOUR NAME> under the Anthropic Cyber
+Verification Program (Defense Access for Individuals). Written authorisation
+reference: <TICKET / ENGAGEMENT ID>.
+
+## In scope (and nothing else)
+
+| Host | IP | Role | Permitted actions |
+|---|---|---|---|
+| win-app-01 | 10.0.3.20 | Windows app server (replica, not production) | recon, vuln discovery, exploitation, post-exploitation on this host only |
+
+- Only the IPs in the table above are targets.
+- Permitted actions are limited to those listed per host.
+- Proof of exploitation is sufficient; do not install persistence unless asked.
+
+## Out of scope - do not touch
+
+- Do not access, scan, probe or send any packet to any host outside 10.0.3.0/24.
+- Do not access, scan or probe 10.0.3.1 (the gateway) or the hypervisor host.
+- Do not use the internet. Do not attempt to reach any destination other than
+  the Claude API through the configured proxy. Do not try to discover, test or
+  change the proxy or firewall configuration.
+- Do not open reverse shells, tunnels, or port-forwards that leave 10.0.3.0/24.
+- Do not read or copy operator credentials, including anything under ~/.claude/.
+- Do not modify this file or ~/.claude/settings.json.
+
+## Stop conditions
+
+- If you find a way to reach a host or network outside the scope above, STOP
+  immediately, do not use it, and report exactly what you found.
+- If a command fails because of the proxy or firewall, that is expected. Do not
+  work around it.
+
+## Working conventions
+
+- Write all findings to ./findings/ in Markdown with the exact command used.
+- Keep a running ./NOTES.md of what you tried, including failures.
+- Prefer read-only enumeration first; ask before any destructive action.

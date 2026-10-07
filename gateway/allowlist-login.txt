@@ -1,0 +1,24 @@
+# /etc/squid/allowlist-login.txt  -  ONLY while running `claude` / `/login` or updating
+# Switch to this with:  sudo cvp-mode login     and back with:  sudo cvp-mode run
+# Source: https://code.claude.com/docs/en/network-config  (Network access requirements)
+
+# --- always ---
+api.anthropic.com
+platform.claude.com
+
+# --- OAuth browser sign-in (claude.com page redirects to claude.ai) ---
+.claude.ai
+.claude.com
+
+# --- maintenance: native installer / auto-updater version checks ---
+# (uncomment only while updating Claude Code, then switch back to run mode)
+#downloads.claude.ai
+
+# --- NOT included on purpose (per the docs these are optional or non-essential):
+#   registry.npmjs.org, github.com, raw.githubusercontent.com  (plugins / release notes)
+#   storage.googleapis.com                                      (plugin metadata)
+#   mcp-proxy.anthropic.com                                     (claude.ai MCP connectors)
+#   *.frame.claudeusercontent.com                               (artifacts)
+#   http-intake.logs.us5.datadoghq.com, browser-intake-us5-datadoghq.com (telemetry)
+#   code.claude.com                                             (doc lookups)
+#   formulae.brew.sh                                            (Homebrew only)

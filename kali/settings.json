@@ -1,0 +1,52 @@
+{
+  "env": {
+    "HTTPS_PROXY": "http://10.0.3.1:3128",
+    "HTTP_PROXY": "http://10.0.3.1:3128",
+    "NO_PROXY": "localhost,127.0.0.1,::1,10.0.3.0/24",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_TELEMETRY": "1",
+    "DISABLE_ERROR_REPORTING": "1",
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false",
+    "CLAUDE_CODE_DISABLE_ARTIFACT": "1"
+  },
+
+  "permissions": {
+    "defaultMode": "auto",
+    "deny": [
+      "WebFetch",
+      "WebSearch"
+    ],
+    "ask": [
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(rsync *)",
+      "Bash(nc *)",
+      "Bash(ncat *)",
+      "Bash(socat *)",
+      "Bash(chisel *)",
+      "Bash(ligolo*)"
+    ]
+  },
+
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Organization: <YOUR BUSINESS NAME>. Primary use: authorised offensive-security testing under the Anthropic Cyber Verification Program (Defense Access for Individuals), inside an isolated lab.",
+      "Network posture: this VM (10.0.3.10) is on an isolated VMware LAN segment 10.0.3.0/24 with no default route. The ONLY permitted egress is the Claude API through the explicit HTTP proxy at 10.0.3.1:3128 (already configured via HTTPS_PROXY). No other internet access exists or should be sought.",
+      "Host containment: VM with an off-host egress allow-list enforced by a separate gateway VM. Allowed external hosts via the proxy only: api.anthropic.com, platform.claude.com. There is no cloud metadata endpoint. The gateway at 10.0.3.1 and the VMware host are infrastructure, not targets, and must never be probed, scanned, tunnelled through or reconfigured.",
+      "Trusted repo: the engagement working directory only.",
+      "Sensitive remote targets: 10.0.3.1 (gateway), the VMware host, and any address outside 10.0.3.0/24.",
+      "Engagement targets: ONLY the hosts named as in-scope in CLAUDE.md in the working directory. If CLAUDE.md names no targets, nothing is in scope."
+    ],
+    "hard_deny": [
+      "$defaults",
+      "Never attempt to reach any host outside 10.0.3.0/24 by any means other than the configured HTTPS proxy, and never attempt to discover, test, modify or bypass the proxy, firewall or hypervisor configuration.",
+      "Never open reverse shells, tunnels, port-forwards, DNS/ICMP exfiltration channels or any connection that terminates outside the 10.0.3.0/24 lab segment.",
+      "Never read, copy or use OAuth tokens, API keys or credentials belonging to the operator (including anything under ~/.claude/) for any purpose other than the normal operation of Claude Code."
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Never run scans, exploits or state-changing actions against a host that is not explicitly listed as in-scope in CLAUDE.md."
+    ]
+  }
+}

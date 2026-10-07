@@ -1,0 +1,8 @@
+# never commit credentials or logs
+*.credentials.json
+.credentials.json
+*.log
+*.pem
+*.key
+id_*
+cvpsync*

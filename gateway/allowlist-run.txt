@@ -1,0 +1,11 @@
+# /etc/squid/allowlist-run.txt  -  ACTIVE DURING ENGAGEMENTS
+# Minimum set for Claude Code to talk to the model with an OAuth (claude.ai) login.
+# Source: https://code.claude.com/docs/en/network-config  (Network access requirements)
+#
+# Squid dstdomain syntax: a leading dot matches the domain and all subdomains.
+
+# Claude API requests, feature-flag fetches
+api.anthropic.com
+
+# OAuth token exchange / refresh / revocation for claude.ai accounts
+platform.claude.com
