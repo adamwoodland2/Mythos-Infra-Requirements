@@ -1,6 +1,10 @@
 # /etc/squid/allowlist-login.txt  -  ONLY while re-authenticating Claude Code inside the lab
 # Switch to this with:  sudo cvp-mode login     and back with:  sudo cvp-mode run
 # Normally you sign in on NAT during the Kali build (D-016) and never need this.
+# Google's sign-in pages are deliberately not listed, so a Google sign-in can't
+# be completed in Kali's browser through this list; do the browser step on the
+# host instead (CHECKLIST §4 Phase B). This only helps if Kali's browser still
+# holds a claude.ai session.
 # Source: https://code.claude.com/docs/en/network-config  (Network access requirements)
 #
 # Exact hostnames only (no leading dots), so login mode never opens a whole

@@ -244,6 +244,13 @@ host, and only then installs `settings.json` (whose proxy is unreachable on
 NAT). No agentic work happens before Kali moves to the lab. Login mode stays as
 a fallback for re-authenticating inside the lab.
 
+*2026-10-09:* the grant account signs in with Google, so login mode can't
+complete a fresh sign-in in Kali's browser (Google's pages aren't listed, and
+the security key isn't in the VM). Re-authenticating inside the lab means the
+browser step on the host, with VMware copy and paste turned on just for that.
+Adding Google's sign-in hosts to login mode was rejected: it would open a broad
+set of Google domains to the sandbox for a rare task.
+
 ## D-017 Gateway SSH is for the transcript drop-box only, and the drop-box refuses deletes
 
 **Date:** 2026-10-09 · **Status:** active; corrected by D-018
