@@ -89,7 +89,7 @@ the custom format is called `cvp`.
 
 ## D-006 Two allow-lists (run / login) switched by a logged script
 
-**Date:** 2026-10-07 · **Status:** active
+**Date:** 2026-10-07 · **Status:** superseded in part by D-021 (three lists, exact login hosts)
 
 NC lists ~18 hosts Claude Code may contact. Only `api.anthropic.com` and
 `platform.claude.com` are needed during a run with an OAuth login (`claude.ai`
@@ -105,11 +105,22 @@ shows when the wider list was active.
 
 ## D-007 OAuth credential stays on Kali (gap accepted for now)
 
-**Date:** 2026-10-07 · **Status:** active - known gap, see CHECKLIST §8
+**Date:** 2026-10-07, revised 2026-10-09 · **Status:** active - known gap, see CHECKLIST §8
 
 CB 1.a wants "the API key injected from outside the sandbox". SR §3.2 requires
 OAuth rather than keys for individuals, and Claude Code's OAuth refresh token
 lives in `~/.claude/.credentials.json` on the VM.
+
+*Revised 2026-10-09 after re-reading the guidance:* keeping the credential out
+of the sandbox is a recommendation, not a requirement, for every tier. The
+getting-started sandboxing article's reference design is a credential proxy
+holding a `claude setup-token` token, with the agent given only a placeholder
+`CLAUDE_CODE_OAUTH_TOKEN`. That token is long-lived, and SR §3 forbids static
+or long-lived credentials after 15 Dec 2026, so the two documents pull in
+different directions for an individual; ask the account team before building
+it. Added mitigations (D-020): `blockReadsOutsideWorkingDirectories`,
+`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, a tampering `soft_deny`, and `cvp-run`
+refusing to start when passwordless sudo is available.
 
 Options:
 
@@ -158,7 +169,8 @@ exceptions in `autoMode.environment` rather than disabling it.
 - adds `hard_deny` entries for leaving the segment and for touching the
   operator's credentials;
 - lives in `~/.claude/settings.json`, because AM says the classifier does not
-  read `autoMode` from project-level settings files.
+  read `autoMode` from project-level settings files. *Superseded by D-020:
+  it is now root-owned managed settings.*
 
 `permissions.deny` on WebFetch/WebSearch is belt-and-braces (the proxy already
 blocks them) and stops wasted turns. `permissions.ask` on ssh/scp/nc/socat/
@@ -177,7 +189,7 @@ Hence `kali/CLAUDE.md.template` and the matching wording in `settings.json`.
 
 ## D-012 Transcripts synced to the gateway rather than relying on local retention
 
-**Date:** 2026-10-07 · **Status:** active
+**Date:** 2026-10-07 · **Status:** superseded by D-018
 
 CB 1.c / 2.e: retain transcripts and egress logs ≥ 30 days. Kali is
 snapshot-restored between engagements (D-002, D-009), which would wipe
@@ -193,7 +205,8 @@ Claude Code transcript expiry) was *not* verified; the sync makes it moot.
 The target is a replica (CB 2.g: never a live production / OT / ICS system).
 It has no reason to leave the lab, and giving it none removes a second egress
 path the agent could pivot through. Licence activation and updates are done on
-NAT before the adapter is moved.
+NAT before the adapter is moved. Targets are configured by hand (no script),
+and since 2026-10-09 the gateway's proxy refuses them outright (D-019).
 
 ## D-014 Markdown checklist in git, not a Word document
 
@@ -231,9 +244,15 @@ host, and only then installs `settings.json` (whose proxy is unreachable on
 NAT). No agentic work happens before Kali moves to the lab. Login mode stays as
 a fallback for re-authenticating inside the lab.
 
-## D-017 Gateway SSH is for the transcript drop-box only, and the drop-box is append-only
+## D-017 Gateway SSH is for the transcript drop-box only, and the drop-box refuses deletes
 
-**Date:** 2026-10-09 · **Status:** active
+**Date:** 2026-10-09 · **Status:** active; corrected by D-018
+
+*Correction:* this entry first called the drop-box "append-only". It isn't:
+`-no-del` stops deletes, but rrsync still lets Kali overwrite or truncate a
+file (only `-no-overwrite` stops that, and growing transcripts need
+overwriting). D-018 adds the gateway-side snapshots that make overwrites
+detectable instead.
 
 Ubuntu's sshd allows password logins by default, and the original ruleset let
 the whole lab reach port 22 on the gateway - the egress enforcement point. Now
@@ -247,3 +266,101 @@ restore would have deleted earlier engagements' transcripts on the gateway
 (D-012), and a compromised Kali could have wiped its own audit trail. The key
 is fetched from Kali over the lab segment by `cvp-enrol-key` rather than pasted,
 because neither VM has a usable clipboard.
+
+## D-018 Transcripts: synced every minute, snapshotted root-only on the gateway, checked for in-place edits
+
+**Date:** 2026-10-09 · **Status:** active (replaces D-012)
+
+A review found the drop-box was not append-only (D-017) and that syncing by
+hand after an engagement could lose the only copy. The guidance (offline
+monitoring article) asks for transcripts captured outside the sandbox, kept at
+least 30 days, scanned with pattern rules, reviewed by a model, and a random
+5-10% of unflagged ones read anyway.
+
+- Kali: a root-owned `cvp-sync.timer` runs `sync-transcripts` every minute as
+  the operator's user, and `cvp-run` syncs again when Claude Code exits.
+- Gateway: Kali writes only to `/var/cvp/incoming` (`rrsync -wo -no-del`).
+  `cvp-archive` runs every 5 minutes and copies anything new into a root-only
+  snapshot under `/var/cvp/archive` (hard links for unchanged
+  files). Kali can't reach a snapshotted version. Because JSONL transcripts
+  only grow, a file that changed other than by growing, or disappeared, is
+  logged as NON-APPEND / MISSING. Snapshots are pruned at 45 days; the newest
+  always holds every file.
+- `cvp-review` lists those warnings, pattern hits per session, and a random 10%
+  of the unflagged sessions. Model review is a manual step in a separate
+  Claude session outside the lab.
+- nftables drop lines now also go to `/var/log/cvp-lab-nft.log` (rsyslog, 45
+  days) instead of relying on journald, whose retention isn't time-based.
+
+Not met: the guidance prefers transcripts written by an orchestrator outside
+the sandbox (stream-json). Interactive Claude Code on Kali writes its own, so
+anything faked before the first sync would not be detected; the Squid and
+nftables logs remain the independent record. Kali-side `-no-overwrite` was
+rejected because growing transcripts have to be re-sent.
+
+## D-019 Target scope enforced on Kali; the gateway serves Kali only
+
+**Date:** 2026-10-09 · **Status:** active - partial, see CHECKLIST §8
+
+The guidance recommends enforcing engagement scope in the network ("allow-list
+egress to the model API endpoint and explicitly in-scope targets"). Kali and
+the targets share one /24 segment, so their traffic never crosses the gateway.
+
+- `cvp-scope` (nftables on Kali, output policy drop) allows only the gateway's
+  proxy/SSH/ping and the engagement's in-scope IPs. The set is empty after
+  every boot; `sudo cvp-scope set` fills it, and `cvp-run` refuses to start
+  unless it matches the CLAUDE.md in-scope table.
+- It is on-host, so it holds only while the agent has no root (`cvp-run` also
+  refuses to start if passwordless sudo works). A root process could flush it
+  or send raw frames past it.
+- Squid's `src` ACL and the nftables 3128 rule now admit only 10.0.3.11, so a
+  compromised Windows target can't use the proxy to reach the Anthropic hosts.
+
+Off-host enforcement would need the targets on their own LAN segment with the
+gateway routing Kali to in-scope targets only. That changes the 10.0.3.21-30
+addressing, so it's left as an option for later.
+
+## D-020 Root-owned managed settings, a fail-closed launcher, and a pinned model
+
+**Date:** 2026-10-09 · **Status:** active (replaces the settings location in D-010)
+
+The auto mode article says to "treat autoMode settings as security
+configuration: deploy them through managed settings". A user-level
+`~/.claude/settings.json` can be edited by the agent, which runs as the same
+user.
+
+- `kali/managed-settings.json` installs to `/etc/claude-code/managed-settings.json`,
+  root-owned. It adds `forceLoginMethod: "claudeai"`,
+  `disableBypassPermissionsMode`, `blockReadsOutsideWorkingDirectories` (with
+  the wordlist directories added back), `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, and
+  a tampering `soft_deny` rule.
+- The model is pinned with `model` + `availableModels` + `enforceAvailableModels`
+  to the ID the operator gives `setup-kali.sh build`. The Mythos model ID isn't
+  in Anthropic's public model list, so it isn't hard-coded or guessed.
+- `cvp-run <hours>` is the only supported way to start Claude Code. It refuses
+  to start unless the workspace is outside the public repo, the network is one
+  lab interface with no route out, the firewall scope matches CLAUDE.md, no
+  credential variable or `apiKeyHelper` would override the OAuth login, the
+  login is claude.ai for the expected account, the managed settings pin the
+  model, the proxy allows Anthropic and refuses others, sudo needs a password,
+  no VMware shared folder is mounted, and the sync timer is running. The time
+  limit is required (the guidance says not to accept a generous default), and
+  everything the run started is killed when it ends.
+
+## D-021 Requirement labels corrected; login and update allow-lists split
+
+**Date:** 2026-10-09 · **Status:** active
+
+Re-reading the three support articles (all updated 2026-10-06): only the
+Security Requirements are mandatory, and for an individual that is §3 plus
+Incident Reporting, Cooperation and Ongoing Review from §1. Off-host egress
+control and 30-day retention are recommendations for this tier (requirements
+only in §4/§5), and phishing-resistant MFA means one qualifying method, not
+two keys. The checklist now labels them that way.
+
+The login list used `.claude.ai` / `.claude.com`, which already covered
+`downloads.claude.ai`; uncommenting that line for updates would also have made
+Squid refuse to start (overlapping entries). Login now uses exact `claude.ai`
+and `claude.com`, and a separate `cvp-mode update` list adds only
+`downloads.claude.ai`. Switching back to `run` restarts Squid so no tunnel
+opened under a wider list survives.

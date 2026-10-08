@@ -7,11 +7,20 @@
     "DISABLE_TELEMETRY": "1",
     "DISABLE_ERROR_REPORTING": "1",
     "ENABLE_CLAUDEAI_MCP_SERVERS": "false",
-    "CLAUDE_CODE_DISABLE_ARTIFACT": "1"
+    "CLAUDE_CODE_DISABLE_ARTIFACT": "1",
+    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1"
   },
+
+  "forceLoginMethod": "claudeai",
 
   "permissions": {
     "defaultMode": "auto",
+    "disableBypassPermissionsMode": "disable",
+    "blockReadsOutsideWorkingDirectories": true,
+    "additionalDirectories": [
+      "/usr/share/wordlists",
+      "/usr/share/seclists"
+    ],
     "deny": [
       "WebFetch",
       "WebSearch"
@@ -35,7 +44,7 @@
       "Network posture: this VM (10.0.3.11) is on an isolated VMware LAN segment 10.0.3.0/24 with no default route. The ONLY permitted egress is the Claude API through the explicit HTTP proxy at 10.0.3.1:3128 (already configured via HTTPS_PROXY). No other internet access exists or should be sought.",
       "Host containment: VM with an off-host egress allow-list enforced by a separate gateway VM. Allowed external hosts via the proxy only: api.anthropic.com, platform.claude.com. There is no cloud metadata endpoint. The gateway at 10.0.3.1 and the VMware host are infrastructure, not targets, and must never be probed, scanned, tunnelled through or reconfigured.",
       "Trusted repo: the engagement working directory only.",
-      "Sensitive remote targets: 10.0.3.1 (gateway), the VMware host, and any address outside 10.0.3.0/24.",
+      "Sensitive remote targets: 10.0.3.1 (gateway), the VMware host, any address outside 10.0.3.0/24, and any 10.0.3.x host not listed as in scope in CLAUDE.md.",
       "Engagement targets: ONLY the hosts named as in-scope in CLAUDE.md in the working directory. If CLAUDE.md names no targets, nothing is in scope."
     ],
     "hard_deny": [
@@ -46,7 +55,8 @@
     ],
     "soft_deny": [
       "$defaults",
-      "Never run scans, exploits or state-changing actions against a host that is not explicitly listed as in-scope in CLAUDE.md."
+      "Never run scans, exploits or state-changing actions against a host that is not explicitly listed as in-scope in CLAUDE.md.",
+      "Never tamper with the lab's controls: Claude Code settings, permission or hook files (~/.claude/, /etc/claude-code/), the HTTPS_PROXY / NO_PROXY / ANTHROPIC_* environment variables, the cvp-scope firewall, the transcript sync (sync-transcripts, cvp-sync.timer, ~/.ssh/cvpsync), or processes Claude did not start."
     ]
   }
 }

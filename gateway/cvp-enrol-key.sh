@@ -5,8 +5,10 @@
 #   on gateway:   sudo cvp-enrol-key [URL]   (default http://10.0.3.11:8000/cvpsync.pub)
 #
 # The key is forced into rrsync write-only with deletes disabled, so Kali can
-# add and update transcripts under /var/cvp/transcripts but never read or
-# delete them. Re-running replaces the previous key.
+# add and update transcripts under /var/cvp/incoming but never read or delete
+# them. Overwrites are possible there by design (transcripts grow), so
+# cvp-archive snapshots incoming into root-only copies and flags any file that
+# changed other than by growing. Re-running replaces the previous key.
 
 set -euo pipefail
 URL="${1:-http://10.0.3.11:8000/cvpsync.pub}"
@@ -21,7 +23,7 @@ if ! [[ "$key" =~ $re ]] || ! ssh-keygen -lf - <<<"$key" >/dev/null 2>&1; then
   exit 1
 fi
 
-printf 'command="/usr/bin/rrsync -wo -no-del /var/cvp/transcripts",restrict %s\n' "$key" > "$AK"
+printf 'command="/usr/bin/rrsync -wo -no-del /var/cvp/incoming",restrict %s\n' "$key" > "$AK"
 chown cvpsync:cvpsync "$AK"
 chmod 600 "$AK"
 echo "Installed for cvpsync: $(ssh-keygen -lf "$AK")"

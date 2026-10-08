@@ -1,0 +1,22 @@
+# /etc/logrotate.d/cvp-lab  -  45 days of the lab's own logs (> the 30 days
+# the containment guidance asks for). Squid's logs are in /etc/logrotate.d/squid.
+
+/var/log/cvp-lab-nft.log {
+    daily
+    rotate 45
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}
+
+/var/log/cvp-transcripts.log /var/log/cvp-mode.log {
+    monthly
+    rotate 12
+    missingok
+    notifempty
+    compress
+}

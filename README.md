@@ -14,10 +14,13 @@ Based on documentation at https://support.claude.com/en/articles/17317514-agent-
 Start with [CHECKLIST.md](CHECKLIST.md). Everything else is a drop-in file it points at.
 
 ```
-gateway/   egress gateway VM: nftables, Squid, allow-lists, mode switch, logrotate, installer
-kali/      Claude Code sandbox VM: settings.json, CLAUDE.md template, net config, transcript sync, escape test
-windows/   target VM: static-IP / no-egress PowerShell
+gateway/   egress gateway VM: nftables, Squid, allow-lists, mode switch, transcript drop-box,
+           snapshots and review, logrotate, installer
+kali/      Claude Code sandbox VM: setup script, managed settings, scope firewall, cvp-run
+           launcher, net config, transcript sync, CLAUDE.md template, escape test
 ```
+
+Windows targets are configured by hand (CHECKLIST §5).
 
 Lab addressing assumed throughout (change in the files if you use something else):
 
@@ -27,6 +30,7 @@ Lab addressing assumed throughout (change in the files if you use something else
 | Kali / Claude Code | 10.0.3.11 |
 | Windows targets (as many as needed) | 10.0.3.21-30 |
 
-Nothing in this repo should ever contain a credential. The Kali OAuth token lives in
-`~/.claude/.credentials.json` on the VM only, and the transcript sync deliberately
-excludes it.
+Nothing in this repo should ever contain a credential or engagement material. The
+Kali OAuth token lives in `~/.claude/.credentials.json` on the VM only, and the
+transcript sync deliberately excludes it. Engagement directories live outside the
+clone (e.g. `~/engagements/<name>`).

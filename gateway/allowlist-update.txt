@@ -1,0 +1,10 @@
+# /etc/squid/allowlist-update.txt  -  ONLY while updating Claude Code on Kali
+# Switch to this with:  sudo cvp-mode update    run `claude update` on Kali, then:  sudo cvp-mode run
+# Source: https://code.claude.com/docs/en/network-config  (Network access requirements)
+
+# --- always ---
+api.anthropic.com
+platform.claude.com
+
+# --- native installer, auto-updater and update version checks (v2.1.116 and later) ---
+downloads.claude.ai

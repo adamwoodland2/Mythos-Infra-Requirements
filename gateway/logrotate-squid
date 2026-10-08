@@ -1,7 +1,7 @@
 # /etc/logrotate.d/squid  -  replaces the Debian/Ubuntu default
 # CVP requires egress logs retained for at least 30 days; this keeps 45 daily
-# archives. The transcript drop-box is retained by the same cadence in
-# /var/cvp/transcripts (handled by sync-transcripts.sh on the Kali side).
+# archives. Transcript snapshots (/var/cvp/archive) are pruned at 45 days by
+# cvp-archive; the lab's own logs are in /etc/logrotate.d/cvp-lab.
 
 /var/log/squid/access.log /var/log/squid/cache.log {
     daily
@@ -15,12 +15,4 @@
     postrotate
         test ! -e /run/squid.pid || /usr/sbin/squid -k rotate
     endscript
-}
-
-/var/log/cvp-mode.log {
-    monthly
-    rotate 12
-    missingok
-    notifempty
-    compress
 }

@@ -1,0 +1,32 @@
+#!/usr/sbin/nft -f
+# /etc/cvp-scope.nft  -  Kali's outbound scope, loaded at boot by cvp-scope.service
+#
+# Kali may start connections only to the gateway (proxy, transcript sync, ping)
+# and to the engagement's in-scope targets. The target set is EMPTY after every
+# boot; `sudo cvp-scope set <IP>...` fills it for an engagement. Replies to
+# connections a target opens (e.g. a reverse shell) pass as established traffic.
+#
+# This runs on Kali itself, so it holds only while the agent has no root: it
+# stops mistakes and unprivileged tools, not a process that can run nft.
+
+table inet cvp_scope
+delete table inet cvp_scope
+
+table inet cvp_scope {
+    set targets {
+        type ipv4_addr
+    }
+
+    chain output {
+        type filter hook output priority 0; policy drop;
+        oifname "lo" accept
+        ct state established,related accept
+        ip daddr 10.0.3.1 tcp dport { 22, 3128 } accept
+        ip daddr 10.0.3.1 icmp type echo-request accept
+        ip daddr @targets accept
+        # broadcast / multicast chatter: drop quietly
+        ip daddr { 10.0.3.255, 255.255.255.255, 224.0.0.0/4 } drop
+        meta nfproto ipv6 drop
+        log prefix "cvp-scope-drop: " counter drop
+    }
+}

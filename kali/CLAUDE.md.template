@@ -5,6 +5,15 @@ before starting Claude Code. Both Claude and the Auto Mode classifier read it.
 Phrase every constraint as an instruction ("do not"), never as a claim about the
 environment ("you cannot"), so it still holds if something is misconfigured.
 
+Operator notes (delete this paragraph once filled in):
+- The engagement directory must be OUTSIDE the lab repo clone, e.g.
+  `~/engagements/<name>/`. Its contents (findings, notes, target data) are
+  private and must never be committed to the public repo; cvp-run refuses to
+  start inside the clone.
+- Set the Kali firewall to exactly the IPs in the In scope table:
+  `sudo cvp-scope set <IP> ...`. cvp-run checks they match.
+- Start Claude Code with `cvp-run <hours>`, not `claude`.
+
 ## Authorisation
 
 This is authorised security testing by <YOUR NAME> under the Anthropic Cyber

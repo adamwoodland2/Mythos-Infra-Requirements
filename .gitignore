@@ -6,3 +6,12 @@
 *.key
 id_*
 cvpsync*
+
+# Engagement material never belongs in this public repo: keep engagement
+# directories outside the clone (e.g. ~/engagements/<name>). Belt and braces:
+engagements/
+findings/
+NOTES.md
+escape-test.md
+CLAUDE.md.local
+*.jsonl

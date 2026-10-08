@@ -1,25 +1,24 @@
-# /etc/squid/allowlist-login.txt  -  ONLY while running `claude` / `/login` or updating
+# /etc/squid/allowlist-login.txt  -  ONLY while re-authenticating Claude Code inside the lab
 # Switch to this with:  sudo cvp-mode login     and back with:  sudo cvp-mode run
+# Normally you sign in on NAT during the Kali build (D-016) and never need this.
 # Source: https://code.claude.com/docs/en/network-config  (Network access requirements)
+#
+# Exact hostnames only (no leading dots), so login mode never opens a whole
+# domain, and so no entry can overlap another - Squid refuses to start if one does.
 
 # --- always ---
 api.anthropic.com
-# platform.claude.com is covered by .claude.com below. Do not list it again:
-# Squid refuses to start if one entry is a subdomain of another.
+platform.claude.com
 
-# --- OAuth browser sign-in (claude.com page redirects to claude.ai) ---
-.claude.ai
-.claude.com
-
-# --- maintenance: native installer / auto-updater version checks ---
-# (uncomment only while updating Claude Code, then switch back to run mode)
-#downloads.claude.ai
+# --- claude.ai account sign-in (the claude.com page redirects to claude.ai) ---
+claude.ai
+claude.com
 
 # --- NOT included on purpose (per the docs these are optional or non-essential):
+#   downloads.claude.ai                                         (updates: use `cvp-mode update`)
 #   registry.npmjs.org, github.com, raw.githubusercontent.com  (plugins / release notes)
 #   storage.googleapis.com                                      (plugin metadata)
 #   mcp-proxy.anthropic.com                                     (claude.ai MCP connectors)
 #   *.frame.claudeusercontent.com                               (artifacts)
 #   http-intake.logs.us5.datadoghq.com, browser-intake-us5-datadoghq.com (telemetry)
 #   code.claude.com                                             (doc lookups)
-#   formulae.brew.sh                                            (Homebrew only)
