@@ -17,7 +17,8 @@ reference: <TICKET / ENGAGEMENT ID>.
 |---|---|---|---|
 | win-app-01 | 10.0.3.21 | Windows app server (replica, not production) | recon, vuln discovery, exploitation, post-exploitation on this host only |
 
-- Only the IPs in the table above are targets.
+- Only the IPs in the table above are targets. (Add a row per target in use,
+  from win-app-01 = 10.0.3.21 to win-app-10 = 10.0.3.30.)
 - Permitted actions are limited to those listed per host.
 - Proof of exploitation is sufficient; do not install persistence unless asked.
 

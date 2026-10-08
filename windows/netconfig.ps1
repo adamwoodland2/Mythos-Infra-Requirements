@@ -3,8 +3,8 @@
 # Static IP, NO default gateway, NO DNS, NO proxy. The target has no reason to
 # leave the lab segment. Do any licence activation / updates on NAT beforehand.
 #
-#   .\netconfig.ps1                  # first target, 10.0.3.21
-#   .\netconfig.ps1 -IP 10.0.3.22    # targets use 10.0.3.21-30
+#   .\netconfig.ps1                  # first target, 10.0.3.21 (win-app-01 on Kali)
+#   .\netconfig.ps1 -IP 10.0.3.22    # further targets use 10.0.3.22-30 (win-app-02 to -10)
 
 param(
     [ValidatePattern('^10\.0\.3\.(2[1-9]|30)$')]

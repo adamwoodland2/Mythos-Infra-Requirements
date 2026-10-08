@@ -35,7 +35,7 @@ Windows host (VMware Workstation)
  └─ LAN Segment "cvp-lab" 10.0.3.0/24  (no host adapter, no VMware DHCP, no default route)
         ├─ [GW]   10.0.3.1      Squid :3128 (allow-list + log) + nftables (no forwarding)
         ├─ [KALI] 10.0.3.11     Claude Code, HTTPS_PROXY -> 10.0.3.1:3128
-        └─ [WIN]  10.0.3.21-30  target apps, no proxy, no route out
+        └─ [WIN]  10.0.3.21-30  target apps (as many as needed), no proxy, no route out
 ```
 
 Why this shape: the requirement is that wherever the model does agentic work, outbound traffic is limited to an allow-list **enforced off the host** and **logged**. NAT gives every VM open internet and no log. A LAN Segment has no host virtual adapter at all, so the only way out of the lab is through the gateway VM, which refuses to route and only offers a proxy.
@@ -65,7 +65,7 @@ Not applicable at this tier (Red Team / Specialized only): organisation-domain a
 - [ ] **Create the LAN Segment.** VM Settings → Network Adapter → *LAN segment* → *LAN Segments...* → Add `cvp-lab`. Do this on any one VM; the segment is then available to all.
 - [ ] **Gateway VM: two adapters.** Adapter 1 = NAT (VMnet8). Adapter 2 = LAN segment `cvp-lab`.
 - [ ] **Kali VM: one adapter** = LAN segment `cvp-lab`. Remove or disconnect any NAT/bridged adapter once the build is done.
-- [ ] **Windows target VM: one adapter** = LAN segment `cvp-lab`.
+- [ ] **Each Windows target VM: one adapter** = LAN segment `cvp-lab`.
 - [ ] **Disable VMware guest side-channels** on Kali and Windows: VM Settings → Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*. These are host-reach paths the escape test will otherwise find.
 - [ ] **Snapshot policy decided.** Kali "gold" snapshot after §4 is complete; restore between engagements. Windows target snapshot before each engagement.
 
@@ -115,7 +115,7 @@ Allow-list rationale (from the Claude Code network docs):
   - `curl -sI https://example.com` → `403 Forbidden` from Squid
   - `curl -skI https://8.8.8.8` → `403 Forbidden` from Squid (bare IPs never match the allow-list, see docs/decisions.md D-015)
   - `curl -sI https://api.anthropic.com` → an HTTP response from Anthropic (any status is fine; it proves the proxy path works)
-  - `ping -c1 10.0.3.21` → Windows target reachable
+  - `ping -c1 win-app-01` (10.0.3.21) → Windows target reachable; same for each further target up to `win-app-10` (10.0.3.30)
 - [ ] **Transcript drop-box key:** on Kali `bash ~/cvp-lab/kali/setup-kali.sh share-key`; on the gateway console `sudo cvp-enrol-key` and check the fingerprints match; Ctrl+C on Kali; then `~/bin/sync-transcripts.sh` should succeed.
 - [ ] `claude auth status --text` shows you signed in. If a login is ever needed inside the lab (expired, or lost to a snapshot restore), try `/login` in run mode with the browser step on the host first; only if that fails use `sudo cvp-mode login` on the gateway, then `sudo cvp-mode run` straight after.
 - [ ] In Claude Code run `/status` and confirm the *Proxy* row shows `http://10.0.3.1:3128`. Then `claude auto-mode config` and confirm your `environment` and `hard_deny` entries appear. `claude auto-mode critique` to sanity-check the custom rules.
@@ -130,11 +130,13 @@ Allow-list rationale (from the Claude Code network docs):
 
 ---
 
-## 5. Windows target VM
+## 5. Windows target VMs
+
+Up to ten targets, 10.0.3.21-30, as many as the engagement needs. Kali knows them as `win-app-01` (10.0.3.21) to `win-app-10` (10.0.3.30). Repeat this section for each one.
 
 - [ ] Build / install the application and complete any licence activation or Windows Update **on NAT first**.
 - [ ] Switch adapter to LAN segment `cvp-lab`; apply Guest Isolation / Shared Folders settings from §2.
-- [ ] Run [`windows/netconfig.ps1`](windows/netconfig.ps1) as Administrator (`-IP 10.0.3.22` and up for further targets; default `10.0.3.21`).
+- [ ] Run [`windows/netconfig.ps1`](windows/netconfig.ps1) as Administrator: no argument for the first target (10.0.3.21), then `-IP 10.0.3.22` and so on up to `-IP 10.0.3.30`. Anything outside that range is refused.
 - [ ] Verify: `Test-NetConnection 10.0.3.11` succeeds; `Test-NetConnection 8.8.8.8` fails.
 - [ ] Snapshot.
 

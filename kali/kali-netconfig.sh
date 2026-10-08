@@ -39,10 +39,14 @@ Acquire::https::Proxy "$GW_PROXY";
 EOF
 
 echo "[3/3] hosts entries so nothing needs DNS inside the lab"
-grep -q 'cvp-gw' /etc/hosts || cat >> /etc/hosts <<'EOF'
-10.0.3.1   cvp-gw
-10.0.3.21  win-app-01
-EOF
+# Windows targets are 10.0.3.21-30: win-app-01 is .21 ... win-app-10 is .30
+sed -i '/^# cvp-lab hosts begin/,/^# cvp-lab hosts end/d' /etc/hosts
+{
+  echo "# cvp-lab hosts begin"
+  echo "10.0.3.1   cvp-gw"
+  for i in $(seq 21 30); do printf '10.0.3.%d  win-app-%02d\n' "$i" $((i - 20)); done
+  echo "# cvp-lab hosts end"
+} >> /etc/hosts
 
 echo
 echo "Done. Log out and back in (or reboot) for the proxy env to apply."

@@ -25,7 +25,7 @@ Lab addressing assumed throughout (change in the files if you use something else
 |---|---|
 | gateway (Squid :3128) | 10.0.3.1 |
 | Kali / Claude Code | 10.0.3.11 |
-| Windows target | 10.0.3.21-30 |
+| Windows targets (as many as needed) | 10.0.3.21-30 |
 
 Nothing in this repo should ever contain a credential. The Kali OAuth token lives in
 `~/.claude/.credentials.json` on the VM only, and the transcript sync deliberately
