@@ -61,12 +61,38 @@ build() {
 
   echo "[4/6] model to pin"
   if [[ -z "${CVP_MODEL+set}" ]]; then
-    echo "To see the exact ID: run 'claude' in another terminal, type /model, note the model"
-    echo "your grant is for (e.g. the Mythos model), then /exit."
-    read -rp "Model ID or alias to pin (blank = don't pin): " CVP_MODEL
+    echo "The pin needs the model's ID, not its display name. To get it: in another"
+    echo "terminal run 'claude', type /model, highlight the model your grant is for"
+    echo "(e.g. Mythos 5.1), press Enter to make it your default, then /exit. That saves"
+    echo "the ID to ~/.claude/settings.json, and this script reads it from there."
+    echo "If the model isn't in the /model list, this account can't use it yet."
+    read -rp "Press Enter once that's done... " _
+    picked="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("model", ""))' \
+              "$HOME/.claude/settings.json" 2>/dev/null || true)"
+    if [[ -n "$picked" ]]; then
+      read -rp "Model ID to pin [$picked] ('none' = don't pin): " CVP_MODEL
+      CVP_MODEL="${CVP_MODEL:-$picked}"
+    else
+      read -rp "Model ID to pin (blank = don't pin): " CVP_MODEL
+    fi
+    [[ "$CVP_MODEL" != none ]] || CVP_MODEL=""
   fi
   model="$CVP_MODEL"
-  [[ "$model" =~ ^[A-Za-z0-9._:@/\[\]-]*$ ]] || die "unexpected characters in the model ID"
+  if [[ "$model" == *" "* ]]; then
+    die "'$model' looks like a display name - enter the ID from /model (no spaces)"
+  fi
+  id_re='^[][A-Za-z0-9._:@/-]*$'     # ']' first and '-' last so both are literal
+  [[ "$model" =~ $id_re ]] || die "unexpected characters in the model ID"
+  if [[ -n "$model" ]]; then
+    # One tiny request (still on NAT, no settings yet) proves the ID exists and this
+    # account can use it, before it is pinned and every lab session depends on it.
+    echo "Checking $model with a one-word request..."
+    if ! reply="$(cd "$(mktemp -d)" && claude -p --model "$model" --max-turns 1 'Reply with the single word OK.' 2>&1)"; then
+      printf '%s\n' "$reply" >&2
+      die "Claude Code can't use '$model' - check the ID with /model, then re-run (or set CVP_MODEL)"
+    fi
+    echo "ok: $model answered"
+  fi
 
   echo "[5/6] managed settings and lab config (root-owned, so Claude can't change them)"
   tmp="$(mktemp)"
