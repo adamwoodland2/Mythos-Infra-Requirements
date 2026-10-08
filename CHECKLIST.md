@@ -25,6 +25,8 @@ Tick items as you go. Only §1 is **mandatory**: it comes from the CVP Security 
 | [`kali/sync-transcripts.sh`](kali/sync-transcripts.sh) | `/usr/local/bin/sync-transcripts` | transcripts to the gateway drop-box (every minute via `cvp-sync.timer`) |
 | [`kali/CLAUDE.md.template`](kali/CLAUDE.md.template) | engagement dir `CLAUDE.md` | per-engagement scope statement |
 | [`kali/escape-test-prompt.md`](kali/escape-test-prompt.md) | - | pre-engagement validation run |
+| [`validation/validate-kali.sh`](validation/validate-kali.sh) | run on Kali | read-only checks of the Kali build (§4 Phase B) |
+| [`validation/validate-windows.ps1`](validation/validate-windows.ps1) | copy to each target | read-only checks of a Windows target (§5) |
 
 Windows targets are configured by hand (§5).
 
@@ -132,6 +134,7 @@ Allow-list rationale (from the Claude Code network docs):
 - [ ] `claude auth status --text` shows you signed in to the grant account.
 - [ ] Know how to sign in again inside the lab (login expired, or lost to a snapshot restore). Google's sign-in pages aren't on any allow-list and your security key isn't in the VM, so the browser step has to happen on the host: temporarily tick *copy and paste* for the Kali VM in VMware (Guest Isolation), log out and back in to Kali's desktop (`cvp-run` stops VMware's copy/paste agent), run `/login`, press `c`, finish in the host browser with *Continue with Google*, paste the code back, then untick *copy and paste* again. Kali itself only needs `platform.claude.com` for that, so run mode should be enough; `sudo cvp-mode login` only helps if Kali's own browser still has a claude.ai session from Phase A.
 - [ ] Make a scratch engagement (`~/engagements/check`, CLAUDE.md from the template with no targets) and run `cvp-run 1` there: every pre-flight line should be `ok`. In Claude Code, `/status` shows the *Proxy* row `http://10.0.3.1:3128`, your account, the pinned model and the managed settings source; the mode indicator shows Auto Mode. `claude auto-mode config` lists your `environment`, `hard_deny` and `soft_deny` entries; `claude auto-mode critique` sanity-checks them.
+- [ ] `bash ~/cvp-lab/validation/validate-kali.sh 10.0.3.21` passes, once with the target out of scope (checks it is blocked) and once after `sudo cvp-scope set 10.0.3.21` (checks it answers); then `sudo cvp-scope none`.
 - [ ] Take the **Kali gold snapshot**.
 
 **Phase C - validation (RECOMMENDED; treat as mandatory for yourself):**
@@ -151,7 +154,7 @@ Up to ten targets, 10.0.3.21-30, as many as the engagement needs. Kali knows the
 - [ ] IPv4 on that adapter: static `10.0.3.2N/24` (`.21` for `win-app-01` ... `.30` for `win-app-10`), **no default gateway, no DNS servers**. Untick IPv6 on the adapter.
 - [ ] No proxy: `netsh winhttp reset proxy` and Settings → Network → Proxy all off.
 - [ ] Optional hosts entries (`C:\Windows\System32\drivers\etc\hosts`): `10.0.3.1 cvp-gw`, `10.0.3.11 kali-cvp`.
-- [ ] Verify in PowerShell: `Test-NetConnection 10.0.3.11` succeeds; `Test-NetConnection 8.8.8.8` fails; `Test-NetConnection 10.0.3.1 -Port 3128` fails (the gateway proxy serves Kali only).
+- [ ] Verify in PowerShell: `Test-NetConnection 10.0.3.11` succeeds; `Test-NetConnection 8.8.8.8` fails; `Test-NetConnection 10.0.3.1 -Port 3128` fails (the gateway proxy serves Kali only). Or copy [`validation/validate-windows.ps1`](validation/validate-windows.ps1) over on NAT before the switch and run `powershell -ExecutionPolicy Bypass -File .\validate-windows.ps1`, which checks all of this and more.
 - [ ] Snapshot.
 
 ---
