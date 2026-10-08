@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
 # kali-netconfig.sh  -  run once on the Kali VM AFTER it has been moved from NAT
 # to the "cvp-lab" LAN segment. Sets a static IP with NO default gateway and
-# points the system-wide proxy at the gateway VM so the OAuth browser login and
-# curl/apt (when allowed) also go through Squid.
+# points the system-wide proxy at the gateway VM so curl and apt (when allowed)
+# also go through Squid. Claude Code gets its proxy from ~/.claude/settings.json.
 #
 #   sudo bash kali-netconfig.sh [interface]      (default: eth0)
 
 set -euo pipefail
 IF="${1:-eth0}"
-LAB_IP=10.0.3.10/24
+LAB_IP=10.0.3.11/24
 GW_PROXY=http://10.0.3.1:3128
 
 echo "[1/3] NetworkManager static profile on $IF (no gateway, no DNS)"
 nmcli connection delete cvp-lab >/dev/null 2>&1 || true
+# autoconnect-priority so the old NAT/DHCP profile never wins after a reboot
 nmcli connection add type ethernet ifname "$IF" con-name cvp-lab \
   ipv4.method manual ipv4.addresses "$LAB_IP" \
   ipv4.never-default yes ipv4.dns "" ipv6.method disabled \
-  connection.autoconnect yes
+  connection.autoconnect yes connection.autoconnect-priority 100
 nmcli connection up cvp-lab
 
-echo "[2/3] system-wide proxy environment (browser + CLI tools)"
-cat > /etc/environment.d/90-cvp-proxy.conf <<EOF
+echo "[2/3] system-wide proxy environment (CLI tools, every login)"
+# /etc/environment is read by pam_env for console, SSH and LightDM/Xfce logins.
+# (/etc/environment.d only reaches systemd user services, not Xfce terminals.)
+sed -i -E '/^(HTTPS?_PROXY|NO_PROXY|https?_proxy|no_proxy)=/d' /etc/environment
+cat >> /etc/environment <<EOF
 HTTPS_PROXY=$GW_PROXY
 HTTP_PROXY=$GW_PROXY
 NO_PROXY=localhost,127.0.0.1,::1,10.0.3.0/24
@@ -37,7 +41,7 @@ EOF
 echo "[3/3] hosts entries so nothing needs DNS inside the lab"
 grep -q 'cvp-gw' /etc/hosts || cat >> /etc/hosts <<'EOF'
 10.0.3.1   cvp-gw
-10.0.3.20  win-app-01
+10.0.3.21  win-app-01
 EOF
 
 echo

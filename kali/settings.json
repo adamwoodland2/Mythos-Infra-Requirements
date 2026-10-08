@@ -32,7 +32,7 @@
     "environment": [
       "$defaults",
       "Organization: <YOUR BUSINESS NAME>. Primary use: authorised offensive-security testing under the Anthropic Cyber Verification Program (Defense Access for Individuals), inside an isolated lab.",
-      "Network posture: this VM (10.0.3.10) is on an isolated VMware LAN segment 10.0.3.0/24 with no default route. The ONLY permitted egress is the Claude API through the explicit HTTP proxy at 10.0.3.1:3128 (already configured via HTTPS_PROXY). No other internet access exists or should be sought.",
+      "Network posture: this VM (10.0.3.11) is on an isolated VMware LAN segment 10.0.3.0/24 with no default route. The ONLY permitted egress is the Claude API through the explicit HTTP proxy at 10.0.3.1:3128 (already configured via HTTPS_PROXY). No other internet access exists or should be sought.",
       "Host containment: VM with an off-host egress allow-list enforced by a separate gateway VM. Allowed external hosts via the proxy only: api.anthropic.com, platform.claude.com. There is no cloud metadata endpoint. The gateway at 10.0.3.1 and the VMware host are infrastructure, not targets, and must never be probed, scanned, tunnelled through or reconfigured.",
       "Trusted repo: the engagement working directory only.",
       "Sensitive remote targets: 10.0.3.1 (gateway), the VMware host, and any address outside 10.0.3.0/24.",

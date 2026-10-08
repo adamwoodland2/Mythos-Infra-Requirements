@@ -12,7 +12,9 @@ Tick items as you go. Each section says whether it is **mandatory** (from the CV
 | [`gateway/allowlist-run.txt`](gateway/allowlist-run.txt) | `/etc/squid/allowlist-run.txt` | engagement allow-list (2 hosts) |
 | [`gateway/allowlist-login.txt`](gateway/allowlist-login.txt) | `/etc/squid/allowlist-login.txt` | OAuth sign-in / update allow-list |
 | [`gateway/cvp-mode.sh`](gateway/cvp-mode.sh) | `/usr/local/sbin/cvp-mode` | switch allow-lists, show denials |
+| [`gateway/cvp-enrol-key.sh`](gateway/cvp-enrol-key.sh) | `/usr/local/sbin/cvp-enrol-key` | install Kali's transcript-sync key, append-only |
 | [`gateway/logrotate-squid`](gateway/logrotate-squid) | `/etc/logrotate.d/squid` | 45-day log retention |
+| [`kali/setup-kali.sh`](kali/setup-kali.sh) | Kali VM | Phase A build (Claude Code, sign-in, settings, sync key) and key hand-over |
 | [`kali/kali-netconfig.sh`](kali/kali-netconfig.sh) | Kali VM | static IP, no default route, system proxy |
 | [`kali/settings.json`](kali/settings.json) | `~/.claude/settings.json` | proxy env, Auto Mode, deny/ask rules |
 | [`kali/CLAUDE.md.template`](kali/CLAUDE.md.template) | engagement dir `CLAUDE.md` | per-engagement scope statement |
@@ -28,12 +30,12 @@ Tick items as you go. Each section says whether it is **mandatory** (from the CV
 Windows host (VMware Workstation)
  │
  ├─ VMnet8 (NAT) ──► internet
- │     └─ [GW] gateway VM        NIC1: NAT          NIC2: LAN Segment "cvp-lab" 10.0.3.1
+ │     └─ [GW] gateway VM        ens33: NAT         ens37: LAN Segment "cvp-lab" 10.0.3.1
  │
  └─ LAN Segment "cvp-lab" 10.0.3.0/24  (no host adapter, no VMware DHCP, no default route)
-        ├─ [GW]   10.0.3.1   Squid :3128 (allow-list + log) + nftables (no forwarding)
-        ├─ [KALI] 10.0.3.10  Claude Code, HTTPS_PROXY -> 10.0.3.1:3128
-        └─ [WIN]  10.0.3.20  target app, no proxy, no route out
+        ├─ [GW]   10.0.3.1      Squid :3128 (allow-list + log) + nftables (no forwarding)
+        ├─ [KALI] 10.0.3.11     Claude Code, HTTPS_PROXY -> 10.0.3.1:3128
+        └─ [WIN]  10.0.3.21-30  target apps, no proxy, no route out
 ```
 
 Why this shape: the requirement is that wherever the model does agentic work, outbound traffic is limited to an allow-list **enforced off the host** and **logged**. NAT gives every VM open internet and no log. A LAN Segment has no host virtual adapter at all, so the only way out of the lab is through the gateway VM, which refuses to route and only offers a proxy.
@@ -71,15 +73,15 @@ Not applicable at this tier (Red Team / Specialized only): organisation-domain a
 
 ## 3. Gateway VM (MANDATORY egress control + logging)
 
-Build on a minimal Debian 12 or Ubuntu Server 24.04 (1 vCPU, 1 GB RAM is plenty).
+Build on a minimal Ubuntu Server 26.04 (Squid 7.2; 1 vCPU, 1 GB RAM is plenty).
 
 - [ ] Install OS with adapter 1 (NAT) only connected; adapter 2 attached but it will be configured by the script.
-- [ ] Check interface names: `ip -br link`. If not `eth0`/`eth1`, edit `LAN_IF`/`WAN_IF` at the top of [`gateway/nftables.conf`](gateway/nftables.conf) and `eth1` in [`gateway/install-gateway.sh`](gateway/install-gateway.sh).
-- [ ] Copy the `gateway/` folder to the VM and run `sudo bash install-gateway.sh`.
+- [ ] Check interface names: `ip -br link` should show `ens33` (NAT) and `ens37` (lab). If yours differ, run the installer as `sudo WAN_IF=<nat> LAN_IF=<lab> bash install-gateway.sh`; it writes them into `/etc/nftables.conf` and the netplan file.
+- [ ] Clone this repo on the VM and run `sudo bash gateway/install-gateway.sh`. It also installs `openssh-server` for the transcript drop-box and limits SSH from the lab to that one key; administer the gateway from the VMware console.
 - [ ] Verify nftables: `sudo nft list ruleset` shows `policy drop` on `input` and `forward`, and `sysctl net.ipv4.ip_forward` = 0.
 - [ ] Verify Squid: `sudo cvp-mode status` shows `allowlist-run.txt` active with exactly `api.anthropic.com` and `platform.claude.com`.
 - [ ] Verify logging: `sudo tail /var/log/squid/access.log` exists and `cat /etc/logrotate.d/squid` shows `rotate 45`.
-- [ ] Set up the transcript drop-box key: paste Kali's `~/.ssh/cvpsync.pub` into `/var/cvp/.ssh/authorized_keys` with the `command="/usr/bin/rrsync -wo /var/cvp/transcripts",restrict` prefix (see comments in `install-gateway.sh`).
+- [ ] Transcript drop-box key: done from Kali in §4 Phase B (`setup-kali.sh share-key`, then `sudo cvp-enrol-key` here).
 - [ ] Optional hardening: once the build is done, restrict the gateway's own `output` chain to the Anthropic hosts (resolve with `dig +short api.anthropic.com platform.claude.com` and add `ip daddr { ... } tcp dport 443 accept`, policy drop). Note Anthropic IPs can change; keep the policy-accept version if you'd rather not maintain that.
 - [ ] Snapshot the gateway.
 
@@ -99,25 +101,23 @@ Allow-list rationale (from the Claude Code network docs):
 
 **Phase A - build on NAT (internet available):**
 
-- [ ] Fresh Kali, fully updated. Install every tool you expect to need for the engagement class (the guidance says install all tools, packages and dependencies before the run so nothing is fetched mid-run). Don't forget wordlists, Python/Go deps, and anything `pip`/`go install` based.
-- [ ] Install Claude Code with the native installer. Confirm `claude --version` ≥ 2.1.257 (needed for the *Host containment* environment entry used in `settings.json`).
-- [ ] Generate the sync key: `ssh-keygen -t ed25519 -f ~/.ssh/cvpsync -N ''` and give the `.pub` to the gateway (§3).
-- [ ] Copy [`kali/settings.json`](kali/settings.json) to `~/.claude/settings.json`. Edit `<YOUR BUSINESS NAME>` and any IPs if you changed the plan.
-- [ ] Copy [`kali/sync-transcripts.sh`](kali/sync-transcripts.sh) to `~/bin/` and `chmod +x`.
-- [ ] Copy [`kali/kali-netconfig.sh`](kali/kali-netconfig.sh) to `~/` (run it in Phase B).
+- [ ] Fresh Kali; clone this repo (e.g. `git clone https://github.com/adamwoodland2/Mythos-Infra-Requirements ~/cvp-lab`).
+- [ ] `bash ~/cvp-lab/kali/setup-kali.sh build` as your normal user. It fully updates Kali, installs Claude Code with the native installer and checks it is ≥ 2.1.257 (needed for the *Host containment* entry), **signs you in** (OAuth - finish the browser step in Kali's browser or on the host and paste the code back), then installs `~/.claude/settings.json` with your business name, the sync key `~/.ssh/cvpsync` and `~/bin/sync-transcripts.sh`. Sign-in happens here, on NAT, because the Google sign-in pages are not on any allow-list (D-016).
+- [ ] Install every tool you expect to need for the engagement class (the guidance says install all tools, packages and dependencies before the run so nothing is fetched mid-run). Don't forget wordlists, Python/Go deps, and anything `pip`/`go install` based.
 - [ ] Shut down.
 
 **Phase B - move to the lab segment:**
 
 - [ ] Change the adapter to LAN segment `cvp-lab`; apply the Guest Isolation / Shared Folders settings from §2.
-- [ ] Boot; `sudo bash ~/kali-netconfig.sh`; log out and in.
+- [ ] Boot; `sudo bash ~/cvp-lab/kali/kali-netconfig.sh`; log out and in.
 - [ ] Connectivity checks from Kali:
   - `ping -c1 8.8.8.8` → *Network is unreachable* (no route)
   - `curl -sI https://example.com` → `403 Forbidden` from Squid
   - `curl -skI https://8.8.8.8` → `403 Forbidden` from Squid (bare IPs never match the allow-list, see docs/decisions.md D-015)
   - `curl -sI https://api.anthropic.com` → an HTTP response from Anthropic (any status is fine; it proves the proxy path works)
-  - `ping -c1 10.0.3.20` → Windows target reachable
-- [ ] **OAuth login:** on the gateway `sudo cvp-mode login`; on Kali run `claude`, complete `/login` in the browser (it goes through the proxy); back on the gateway `sudo cvp-mode run`. Confirm with `sudo cvp-mode status`.
+  - `ping -c1 10.0.3.21` → Windows target reachable
+- [ ] **Transcript drop-box key:** on Kali `bash ~/cvp-lab/kali/setup-kali.sh share-key`; on the gateway console `sudo cvp-enrol-key` and check the fingerprints match; Ctrl+C on Kali; then `~/bin/sync-transcripts.sh` should succeed.
+- [ ] `claude auth status --text` shows you signed in. If a login is ever needed inside the lab (expired, or lost to a snapshot restore), try `/login` in run mode with the browser step on the host first; only if that fails use `sudo cvp-mode login` on the gateway, then `sudo cvp-mode run` straight after.
 - [ ] In Claude Code run `/status` and confirm the *Proxy* row shows `http://10.0.3.1:3128`. Then `claude auto-mode config` and confirm your `environment` and `hard_deny` entries appear. `claude auto-mode critique` to sanity-check the custom rules.
 - [ ] Confirm Auto Mode is actually active: start `claude` and check the mode indicator; if it reports auto mode unavailable, see the permission-modes docs (model/plan requirements).
 - [ ] Take the **Kali gold snapshot**.
@@ -134,8 +134,8 @@ Allow-list rationale (from the Claude Code network docs):
 
 - [ ] Build / install the application and complete any licence activation or Windows Update **on NAT first**.
 - [ ] Switch adapter to LAN segment `cvp-lab`; apply Guest Isolation / Shared Folders settings from §2.
-- [ ] Run [`windows/netconfig.ps1`](windows/netconfig.ps1) as Administrator.
-- [ ] Verify: `Test-NetConnection 10.0.3.10` succeeds; `Test-NetConnection 8.8.8.8` fails.
+- [ ] Run [`windows/netconfig.ps1`](windows/netconfig.ps1) as Administrator (`-IP 10.0.3.22` and up for further targets; default `10.0.3.21`).
+- [ ] Verify: `Test-NetConnection 10.0.3.11` succeeds; `Test-NetConnection 8.8.8.8` fails.
 - [ ] Snapshot.
 
 ---

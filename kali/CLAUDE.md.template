@@ -15,7 +15,7 @@ reference: <TICKET / ENGAGEMENT ID>.
 
 | Host | IP | Role | Permitted actions |
 |---|---|---|---|
-| win-app-01 | 10.0.3.20 | Windows app server (replica, not production) | recon, vuln discovery, exploitation, post-exploitation on this host only |
+| win-app-01 | 10.0.3.21 | Windows app server (replica, not production) | recon, vuln discovery, exploitation, post-exploitation on this host only |
 
 - Only the IPs in the table above are targets.
 - Permitted actions are limited to those listed per host.

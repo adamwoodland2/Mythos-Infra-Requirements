@@ -217,3 +217,33 @@ so nothing legitimate needs the reverse lookup.
 
 `via off` is kept even though Squid 6 warns about it: without it, every 403
 sends `Via: 1.1 <gateway hostname> (squid/6.14)` back to the sandbox.
+
+## D-016 Claude Code signs in on NAT during the Kali build, not through the lab proxy
+
+**Date:** 2026-10-09 · **Status:** active
+
+SR §3 requires the account to sign in through Google (or another IdP) with
+phishing-resistant MFA. Doing `/login` in Kali's browser inside the lab would
+need Google's sign-in pages on the Squid allow-list, plus USB passthrough for a
+security key. `setup-kali.sh build` instead runs `claude auth login` in Phase A
+while Kali still has direct internet, with the browser step optionally on the
+host, and only then installs `settings.json` (whose proxy is unreachable on
+NAT). No agentic work happens before Kali moves to the lab. Login mode stays as
+a fallback for re-authenticating inside the lab.
+
+## D-017 Gateway SSH is for the transcript drop-box only, and the drop-box is append-only
+
+**Date:** 2026-10-09 · **Status:** active
+
+Ubuntu's sshd allows password logins by default, and the original ruleset let
+the whole lab reach port 22 on the gateway - the egress enforcement point. Now
+nftables accepts SSH only from Kali (10.0.3.11), an sshd `Match Address
+10.0.3.0/24` block allows only `cvpsync` with keys, and the gateway is
+administered from the VMware console.
+
+The `cvpsync` key is forced into `rrsync -wo -no-del`, and `sync-transcripts.sh`
+no longer passes `--delete-excluded`. Previously the first sync after a snapshot
+restore would have deleted earlier engagements' transcripts on the gateway
+(D-012), and a compromised Kali could have wiped its own audit trail. The key
+is fetched from Kali over the lab segment by `cvp-enrol-key` rather than pasted,
+because neither VM has a usable clipboard.
