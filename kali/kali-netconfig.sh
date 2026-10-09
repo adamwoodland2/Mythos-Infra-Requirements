@@ -19,6 +19,21 @@ mapfile -t eths < <(nmcli -t -f DEVICE,TYPE device | awk -F: '$2=="ethernet"{pri
 [[ ${#eths[@]} -eq 1 && "${eths[0]}" == "$IF" ]] ||
   die "expected exactly one ethernet adapter ($IF), found: ${eths[*]:-none}. Remove the others in VMware."
 
+# NetworkManager ignores an interface that /etc/network/interfaces configures
+# (e.g. a static address typed into the Kali installer), and then can't apply
+# the lab profile. Stop before changing anything.
+state="$(nmcli -g GENERAL.STATE device show "$IF" 2>/dev/null || true)"
+if [[ "$state" == *unmanaged* ]]; then
+  echo "NetworkManager doesn't manage $IF ($state), so it can't apply the lab profile." >&2
+  if grep -sEn "^[[:space:]]*(auto|allow-hotplug|iface)[[:space:]].*\\b$IF\\b" \
+       /etc/network/interfaces /etc/network/interfaces.d/* >&2; then
+    die "$IF is configured in the file above (ifupdown). Comment out its lines there
+      (keep the 'lo' ones), run 'sudo nmcli device set $IF managed yes', then re-run."
+  fi
+  die "check 'nmcli device status' and /etc/NetworkManager/conf.d/ for an unmanaged-devices
+      setting, then re-run."
+fi
+
 echo "[1/4] NetworkManager: one static lab profile on $IF, nothing else autoconnects"
 nmcli connection delete cvp-lab >/dev/null 2>&1 || true
 while IFS=: read -r uuid type; do
