@@ -34,7 +34,7 @@ if [[ "$state" == *unmanaged* ]]; then
       setting, then re-run."
 fi
 
-echo "[1/4] NetworkManager: one static lab profile on $IF, nothing else autoconnects"
+echo "  network 1/4: NetworkManager: one static lab profile on $IF, nothing else autoconnects"
 nmcli connection delete cvp-lab >/dev/null 2>&1 || true
 while IFS=: read -r uuid type; do
   [[ "$type" == loopback ]] && continue
@@ -47,7 +47,7 @@ nmcli connection add type ethernet ifname "$IF" con-name cvp-lab \
   connection.autoconnect yes connection.autoconnect-priority 100
 nmcli connection up cvp-lab
 
-echo "[2/4] system-wide proxy environment (CLI tools, every login)"
+echo "  network 2/4: system-wide proxy environment (CLI tools, every login)"
 # /etc/environment is read by pam_env for console, SSH and LightDM/Xfce logins.
 # (/etc/environment.d only reaches systemd user services, not Xfce terminals.)
 sed -i -E '/^(HTTPS?_PROXY|NO_PROXY|https?_proxy|no_proxy)=/d' /etc/environment
@@ -65,7 +65,7 @@ Acquire::http::Proxy "$GW_PROXY";
 Acquire::https::Proxy "$GW_PROXY";
 EOF
 
-echo "[3/4] hosts entries so nothing needs DNS inside the lab"
+echo "  network 3/4: hosts entries so nothing needs DNS inside the lab"
 # Windows targets are 10.0.3.21-30: win-app-01 is .21 ... win-app-10 is .30
 sed -i '/^# cvp-lab hosts begin/,/^# cvp-lab hosts end/d' /etc/hosts
 {
@@ -75,14 +75,9 @@ sed -i '/^# cvp-lab hosts begin/,/^# cvp-lab hosts end/d' /etc/hosts
   echo "# cvp-lab hosts end"
 } >> /etc/hosts
 
-echo "[4/4] checks"
+echo "  network 4/4: checks"
 [[ -z "$(ip route show default; ip -6 route show default)" ]] || die "a default route exists"
 ip -4 -o addr show dev "$IF" | grep -q " ${LAB_IP} " || die "$LAB_IP is not on $IF"
 [[ -z "$(ip -4 -o addr show scope global | grep -v " ${LAB_IP} ")" ]] || die "extra IPv4 addresses present"
 echo "ok: $IF = $LAB_IP, no default route, no other addresses"
 
-echo
-echo "Done. Log out and back in (or reboot) for the proxy env to apply."
-echo "Test:  curl -sI https://api.anthropic.com   -> expect an HTTP response from Anthropic"
-echo "       curl -sI https://example.com         -> expect 403 from squid"
-echo "       ping -c1 8.8.8.8                     -> expect 'Network is unreachable'"

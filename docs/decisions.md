@@ -105,7 +105,7 @@ shows when the wider list was active.
 
 ## D-007 OAuth credential stays on Kali (gap accepted for now)
 
-**Date:** 2026-10-07, revised 2026-10-09 · **Status:** active - known gap, see CHECKLIST §8
+**Date:** 2026-10-07, revised 2026-10-09 · **Status:** active - known gap, see docs/reference.md (Known gaps)
 
 CB 1.a wants "the API key injected from outside the sandbox". SR §3.2 requires
 OAuth rather than keys for individuals, and Claude Code's OAuth refresh token
@@ -148,7 +148,7 @@ silently be *un*-filtered. `iifname` matches by string and loads regardless.
 `forward` chain policy drop, no masquerade rule at all, and
 `net.ipv4.ip_forward=0` via sysctl. Any one is sufficient; three means a
 mistake in one (e.g. someone adds a NAT rule "just to apt-get") doesn't open
-the lab. The escape test (CHECKLIST §4C) is what proves it.
+the lab. The escape test (CHECKLIST §7) is what proves it.
 
 ## D-010 Auto Mode on, with environment + hard_deny entries, not `bypassPermissions`
 
@@ -307,7 +307,7 @@ rejected because growing transcripts have to be re-sent.
 
 ## D-019 Target scope enforced on Kali; the gateway serves Kali only
 
-**Date:** 2026-10-09 · **Status:** active - partial, see CHECKLIST §8
+**Date:** 2026-10-09 · **Status:** active - partial, see docs/reference.md (Known gaps)
 
 The guidance recommends enforcing engagement scope in the network ("allow-list
 egress to the model API endpoint and explicitly in-scope targets"). Kali and

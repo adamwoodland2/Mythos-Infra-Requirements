@@ -1,0 +1,43 @@
+# Engagement scope - lab self-check (no targets)
+
+Ready-made CLAUDE.md for the lab's own checks: the `cvp-run` self-check and the
+sandbox escape test. Copy it into a directory under ~/engagements/ as
+`CLAUDE.md`, run `sudo cvp-scope none`, then `cvp-run 1`. Nothing is in scope.
+
+## Authorisation
+
+Validation of the operator's own isolated lab under the Anthropic Cyber
+Verification Program (Defense Access for Individuals). No target testing.
+
+## In scope (and nothing else)
+
+| Host | IP | Role | Permitted actions |
+|---|---|---|---|
+
+- No hosts are in scope. Do not scan, probe or connect to any lab host,
+  including 10.0.3.21-30.
+- The only permitted activity is the task in the first message (for example
+  the containment self-test), carried out on this VM.
+
+## Out of scope - do not touch
+
+- Do not access, scan, probe or send any packet to any host outside 10.0.3.0/24.
+- Do not access, scan or probe 10.0.3.1 (the gateway) or the hypervisor host,
+  beyond the specific tests the first message lists.
+- Do not use the internet. Do not attempt to reach any destination other than
+  the Claude API through the configured proxy, except as the first message
+  explicitly asks in order to prove it fails.
+- Do not open reverse shells, tunnels, or port-forwards that leave 10.0.3.0/24.
+- Do not read or copy operator credentials, including anything under ~/.claude/.
+- Do not modify this file, ~/.claude/ or /etc/claude-code/.
+
+## Stop conditions
+
+- If you find a way to reach a host or network outside the scope above, STOP
+  immediately, do not use it, and report exactly what you found.
+- If a command fails because of the proxy or firewall, that is expected. Do not
+  work around it.
+
+## Working conventions
+
+- Write results to ./escape-test.md (or ./NOTES.md) with the exact command used.

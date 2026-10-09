@@ -22,7 +22,8 @@ echo "WAN (NAT) = $WAN_IF, LAN (cvp-lab) = $LAN_IF"
 
 echo "[1/7] packages"
 apt-get update
-apt-get install -y squid nftables rsync logrotate openssh-server rsyslog
+# curl: cvp-enrol-key fetches Kali's key; python3: rrsync is a Python script
+apt-get install -y squid nftables rsync logrotate openssh-server rsyslog curl python3
 
 echo "[2/7] static IP on the lab interface ($LAN_IF = 10.0.3.1/24, no gateway)"
 # accept-ra off: nothing on the lab segment gets to hand the gateway an IPv6 route
@@ -89,7 +90,7 @@ mkdir -p /var/cvp/incoming /var/cvp/archive /var/cvp/.ssh
 chown root:root /var/cvp
 chown -R cvpsync:cvpsync /var/cvp/incoming /var/cvp/.ssh
 chmod 700 /var/cvp/.ssh /var/cvp/archive
-# The key is added later with `sudo cvp-enrol-key` (CHECKLIST §4B), forced into
+# The key is added later with `sudo cvp-enrol-key` (CHECKLIST §6 step 6), forced into
 # `rrsync -wo -no-del /var/cvp/incoming`: Kali can add and update files there but
 # never read or delete them. cvp-archive snapshots incoming into root-only,
 # read-only copies every 5 minutes and flags any transcript that didn't just grow.

@@ -2,7 +2,13 @@
 
 Build files for an isolated VMware Workstation lab running Claude Code (Kali) under
 the Anthropic Cyber Verification Program, Defense Access for Individuals tier.
-Read CHECKLIST.md first - it is the source of truth and links every file.
+CHECKLIST.md is the build runbook; docs/reference.md lists every file, log, allow-list and
+known gap; docs/decisions.md records why.
+
+CHECKLIST.md format (the owner's requirement): numbered steps only, no bullets, no prose.
+Each step is the action, the exact command, then `Expect:` with what the user will see
+(check the script's real output first), and `If not:` only when there's a known fix.
+Rationale goes in decisions.md, background in reference.md.
 
 Conventions:
 - British English, hyphens not dashes, $ = AUD.

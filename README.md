@@ -11,7 +11,7 @@ Individuals** tier.
 
 Based on documentation at https://support.claude.com/en/articles/17317514-agent-containment-best-practices-for-cvp-participants and https://support.claude.com/en/articles/17202708-cyber-verification-program-security-requirements.
 
-Start with [CHECKLIST.md](CHECKLIST.md). Everything else is a drop-in file it points at.
+Build it with [CHECKLIST.md](CHECKLIST.md): numbered steps, each with what to run and what you should see. Files, logs, allow-lists and known gaps are in [docs/reference.md](docs/reference.md); why it's built this way is in [docs/decisions.md](docs/decisions.md).
 
 ```
 gateway/   egress gateway VM: nftables, Squid, allow-lists, mode switch, transcript drop-box,
@@ -20,7 +20,7 @@ kali/      Claude Code sandbox VM: setup script, managed settings, scope firewal
            launcher, net config, transcript sync, CLAUDE.md template, escape test
 ```
 
-Windows targets are configured by hand (CHECKLIST §5).
+Windows targets are configured by hand (CHECKLIST §4).
 
 Lab addressing assumed throughout (change in the files if you use something else):
 

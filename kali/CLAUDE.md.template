@@ -40,7 +40,7 @@ reference: <TICKET / ENGAGEMENT ID>.
   change the proxy or firewall configuration.
 - Do not open reverse shells, tunnels, or port-forwards that leave 10.0.3.0/24.
 - Do not read or copy operator credentials, including anything under ~/.claude/.
-- Do not modify this file or ~/.claude/settings.json.
+- Do not modify this file, ~/.claude/ or /etc/claude-code/.
 
 ## Stop conditions
 
