@@ -36,11 +36,15 @@ case "${1:-status}" in
   set)
     need_root
     shift
-    [[ $# -gt 0 ]] || { echo "usage: cvp-scope set <IP>..." >&2; exit 2; }
-    for ip in "$@"; do
-      [[ "$ip" =~ $re ]] || { echo "refusing $ip: targets are 10.0.3.21-30" >&2; exit 1; }
-    done
-    apply "$@"
+    [[ $# -gt 0 ]] || { echo "usage: cvp-scope set <IP>...   (or: cvp-scope none)" >&2; exit 2; }
+    if [[ $# -eq 1 && "$1" == none ]]; then
+      apply                      # `set none` means the same as `none`
+    else
+      for ip in "$@"; do
+        [[ "$ip" =~ $re ]] || { echo "refusing $ip: targets are 10.0.3.21-30" >&2; exit 1; }
+      done
+      apply "$@"
+    fi
     ;;
   none)
     need_root
