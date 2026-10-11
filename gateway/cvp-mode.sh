@@ -3,7 +3,8 @@
 #
 #   sudo cvp-mode run     -> api.anthropic.com + platform.claude.com only  (default)
 #   sudo cvp-mode login   -> adds claude.ai and claude.com (exact) for re-authenticating
-#   sudo cvp-mode update  -> adds downloads.claude.ai for `claude update`
+#   sudo cvp-mode update  -> adds downloads.claude.ai and github.com for `claude update`
+#                            and `git pull` of this repo on Kali
 #   sudo cvp-mode status  -> show which list is active and tail recent denials
 #
 # Every switch is written to /var/log/cvp-mode.log so the audit trail shows

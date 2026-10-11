@@ -22,8 +22,9 @@ echo "WAN (NAT) = $WAN_IF, LAN (cvp-lab) = $LAN_IF"
 
 echo "[1/7] packages"
 apt-get update
-# curl: cvp-enrol-key fetches Kali's key; python3: rrsync is a Python script
-apt-get install -y squid nftables rsync logrotate openssh-server rsyslog curl python3
+# curl: cvp-enrol-key fetches Kali's key; python3: rrsync is a Python script;
+# open-vm-tools: vmhgfs-fuse, for cvp-export to reach the host's shared folder
+apt-get install -y squid nftables rsync logrotate openssh-server rsyslog curl python3 open-vm-tools
 
 echo "[2/7] static IP on the lab interface ($LAN_IF = 10.0.3.1/24, no gateway)"
 # accept-ra off: nothing on the lab segment gets to hand the gateway an IPv6 route
@@ -50,6 +51,7 @@ install -m 0755 "$HERE/cvp-mode.sh"         /usr/local/sbin/cvp-mode
 install -m 0755 "$HERE/cvp-enrol-key.sh"    /usr/local/sbin/cvp-enrol-key
 install -m 0755 "$HERE/cvp-archive.sh"      /usr/local/sbin/cvp-archive
 install -m 0755 "$HERE/cvp-review.sh"       /usr/local/sbin/cvp-review
+install -m 0755 "$HERE/cvp-export.sh"       /usr/local/sbin/cvp-export
 touch /var/log/cvp-mode.log
 # Squid binds 10.0.3.1, so it has to start after the lab interface is up. The
 # packaged unit is ordered After=network-online.target but never pulls it in.
@@ -86,10 +88,10 @@ systemctl restart systemd-journald
 echo "[5/7] transcript drop-box for Kali rsync"
 # Shell must be a real one: sshd runs the forced rrsync command through it.
 id cvpsync >/dev/null 2>&1 || useradd -r -M -d /var/cvp -s /bin/sh cvpsync
-mkdir -p /var/cvp/incoming /var/cvp/archive /var/cvp/.ssh
+mkdir -p /var/cvp/incoming /var/cvp/archive /var/cvp/exports /var/cvp/.ssh
 chown root:root /var/cvp
 chown -R cvpsync:cvpsync /var/cvp/incoming /var/cvp/.ssh
-chmod 700 /var/cvp/.ssh /var/cvp/archive
+chmod 700 /var/cvp/.ssh /var/cvp/archive /var/cvp/exports
 # The key is added later with `sudo cvp-enrol-key` (CHECKLIST §6 step 6), forced into
 # `rrsync -wo -no-del /var/cvp/incoming`: Kali can add and update files there but
 # never read or delete them. cvp-archive snapshots incoming into root-only,

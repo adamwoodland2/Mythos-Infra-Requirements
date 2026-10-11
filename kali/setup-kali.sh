@@ -5,7 +5,8 @@
 #   bash kali/setup-kali.sh build       Phase A, on NAT: update Kali, install Claude Code, sign in,
 #                                       managed settings, sync key
 #   bash kali/setup-kali.sh lab         Phase B, on the lab segment: network, scope firewall,
-#                                       cvp-run, transcript sync timer
+#                                       cvp-run, cvp-engagement, transcript sync and timer.
+#                                       Safe to re-run; re-run it after pulling repo updates.
 #   bash kali/setup-kali.sh share-key   Phase B: serve the sync PUBLIC key for `sudo cvp-enrol-key`
 #                                       on the gateway
 #
@@ -156,10 +157,15 @@ ExecStart=/usr/local/sbin/cvp-scope boot
 WantedBy=multi-user.target
 EOF
 
-  echo "[3/4] cvp-run (pre-flight checks + time-limited Claude Code)"
+  echo "[3/4] cvp-run and cvp-engagement, with the CLAUDE.md templates"
   sudo install -m 0755 -o root -g root "$HERE/cvp-run.sh" /usr/local/bin/cvp-run
+  sudo install -m 0755 -o root -g root "$HERE/cvp-engagement.sh" /usr/local/bin/cvp-engagement
+  sudo install -d -m 0755 /usr/local/share/cvp-lab
+  sudo install -m 0644 -o root -g root "$HERE/CLAUDE.md.template" "$HERE/CLAUDE.md.no-targets" \
+    /usr/local/share/cvp-lab/
 
   echo "[4/4] transcript sync every minute (root-owned timer, runs as $USER)"
+  sudo install -m 0755 -o root -g root "$HERE/sync-transcripts.sh" /usr/local/bin/sync-transcripts
   sudo tee /etc/systemd/system/cvp-sync.service >/dev/null <<EOF
 [Unit]
 Description=Sync Claude Code transcripts to the gateway drop-box

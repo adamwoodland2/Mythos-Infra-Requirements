@@ -371,3 +371,39 @@ Squid refuse to start (overlapping entries). Login now uses exact `claude.ai`
 and `claude.com`, and a separate `cvp-mode update` list adds only
 `downloads.claude.ai`. Switching back to `run` restarts Squid so no tunnel
 opened under a wider list survives.
+
+## D-022 Engagements: one folder each on Kali, exported through the gateway
+
+**Date:** 2026-10-11 · **Status:** active
+
+Engagement material has to reach the Windows host, but Kali has no route, no
+shared folder and no clipboard to it, by design. Options considered:
+
+1. A VMware shared folder or copy and paste on Kali after the run. Rejected:
+   it is the host-reach path the escape test looks for, and easy to leave on.
+2. SSH from the host to the gateway's NAT side. Rejected: it opens the
+   gateway's WAN input, which accepts nothing today.
+3. Kali syncs `~/engagements/` with the transcripts (every minute, write-only,
+   no deletes, snapshotted), and `cvp-export` on the gateway packs one
+   engagement - folder, its transcripts, gateway logs, SHA256SUMS - into a
+   VMware shared folder enabled on the gateway only, and only until its next
+   power-off. **Chosen.** Nothing new is reachable from Kali, and the export
+   comes from the gateway's off-host copy.
+
+`cvp-engagement` (`new`, `scope`, `close`, `list`) creates each engagement
+under `~/engagements/<name>` with a filled-in CLAUDE.md, keeps the cvp-scope
+firewall in step with its In scope table, and closes it with a final sync.
+`cvp-archive` append-checks transcripts only, since findings and notes are
+edited legitimately. Because Kali can't reach GitHub from the lab, `github.com`
+joins the supervised `cvp-mode update` list so the repo can be pulled there.
+
+## D-023 Kali's resolver is explicitly 127.0.0.1
+
+**Date:** 2026-10-11 · **Status:** active (refines D-003)
+
+The first escape test passed, and the agent recommended making the resolver
+explicit rather than blank. With no nameserver in `/etc/resolv.conf`, glibc
+falls back to 127.0.0.1 anyway, so behaviour is unchanged: nothing listens
+there and every lookup fails at once. Setting `ipv4.dns 127.0.0.1` makes the
+intent readable and gives `kali-netconfig.sh` something definite to check; it
+fails if any other nameserver appears.

@@ -8,9 +8,11 @@
 # /var/cvp/archive (mode 700, root only; unchanged files are hard links to the
 # previous snapshot), so nothing on Kali can alter a version once snapshotted.
 #
-# Transcripts are JSONL and only ever grow. A changed file that no longer starts
-# with its previous contents, or a file that disappears, is logged as NON-APPEND
-# or MISSING - treat either as possible tampering and review it (cvp-review).
+# Transcripts are JSONL and only ever grow. A transcript that no longer starts
+# with its previous contents is logged as NON-APPEND, and any file that
+# disappears as MISSING - treat either as possible tampering (cvp-review).
+# Engagement folders (findings, notes) are snapshotted too but are expected to
+# change, so they aren't append-checked.
 # Snapshots older than 45 days are pruned; the newest one always stays, and it
 # holds every file ever synced because incoming never loses files.
 
@@ -44,6 +46,10 @@ rsync -a --exclude='.*.??????' ${prev:+--link-dest="$prev"} "$IN/" "$new/"
 if [[ -n "$prev" ]]; then
   while IFS= read -r -d '' f; do
     rel="${f#"$new"/}"
+    case "$rel" in              # only transcripts must only grow; findings and notes get edited
+      */projects/*.jsonl|*/history.jsonl|*/cvp-runs.log) ;;
+      *) continue ;;
+    esac
     old="$prev/$rel"
     [[ -f "$old" ]] || continue
     [[ "$f" -ef "$old" ]] && continue                     # unchanged, hard-linked

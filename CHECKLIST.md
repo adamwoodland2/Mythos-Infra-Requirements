@@ -87,10 +87,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
 
 1. **On NAT, install the application,** activate any licences and run Windows Update.
    Expect: the application works and Windows Update shows nothing pending.
-2. **Download the validation script** (in PowerShell, still on NAT).
-   ```
-   iwr https://raw.githubusercontent.com/adamwoodland2/Mythos-Infra-Requirements/main/validation/validate-windows.ps1 -OutFile C:\validate-windows.ps1
-   ```
+2. **Download the validation script** (still on NAT): in a browser open `github.com/adamwoodland2/Mythos-Infra-Requirements`, go to `validation/validate-windows.ps1`, click *Download raw file*, and save it as `C:\validate-windows.ps1`.
    Expect: `C:\validate-windows.ps1` exists.
 3. **Shut down and move the VM into the lab** in VMware: the only adapter → LAN segment `cvp-lab`; Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*. Boot.
 4. **Set the address** on the adapter (Settings → Network → Ethernet → IP assignment → Edit → Manual → IPv4 on): IP `10.0.3.2N` (`.21` for `win-app-01` ... `.30` for `win-app-10`), subnet mask `255.255.255.0`, gateway blank, DNS blank. IPv6 off.
@@ -148,7 +145,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    ```
    bash ~/Mythos-Infra-Requirements/kali/setup-kali.sh lab
    ```
-   Expect: `ok: eth0 = 10.0.3.11/24, no default route, no other addresses`, then `[2/4]` to `[4/4]`, then `Done.`
+   Expect: `ok: eth0 = 10.0.3.11/24, no default route, no other addresses, DNS 127.0.0.1 only`, then `[2/4]` to `[4/4]`, then `Done.`
    If it says `NetworkManager doesn't manage eth0`: comment out the `eth0` lines in the file it shows (keep the `lo` lines), run `sudo nmcli device set eth0 managed yes`, then run step 2 again.
 3. **Log out of the Kali desktop and back in** (this loads the proxy settings).
 4. **Check the ways out.**
@@ -191,7 +188,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    sync-transcripts
    systemctl is-active cvp-sync.timer
    ```
-   Expect: `... transcripts synced to cvpsync@10.0.3.1:kali/`, then `active`.
+   Expect: `... transcripts and engagements synced to cvpsync@10.0.3.1:kali/`, then `active`.
 
    Then on the gateway:
    ```
@@ -257,79 +254,48 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
 
 ---
 
-## 8. Each engagement
+## 8. Engagements
 
-Before:
-
-1. **Restore the Kali gold snapshot** and the targets' snapshots.
-2. **Check the gateway is in run mode.**
-   ```
-   sudo cvp-mode status
-   ```
-   Expect: `Active allow-list -> /etc/squid/allowlist-run.txt`.
-3. **Make the engagement folder** on Kali (outside the repo clone).
-   ```
-   mkdir -p ~/engagements/<name> && cd ~/engagements/<name>
-   cp ~/Mythos-Infra-Requirements/kali/CLAUDE.md.template CLAUDE.md
-   ```
-4. **Fill in `CLAUDE.md`:** engagement name, date, your name, authorisation reference, one row per in-scope target with its permitted actions. Delete the operator-notes paragraph.
-5. **Set the scope firewall to the same IPs.**
-   ```
-   sudo cvp-scope set <IP> [<IP> ...]
-   ```
-   Expect: `In-scope targets:` followed by exactly the IPs in the CLAUDE.md table.
-6. **Start watching the gateway logs.**
-   ```
-   sudo tail -f /var/log/squid/access.log /var/log/cvp-lab-nft.log
-   ```
-7. **Start Claude Code** with a time limit you choose for this engagement (1-12 hours).
-   ```
-   cvp-run <hours>
-   ```
-   Expect: `All checks passed. Starting Claude Code with a <hours>h limit.`
-
-During:
-
-8. **Watch the tool calls and the gateway logs.** Stop (Ctrl+C, or suspend the VM) on anything you can't explain: a `TCP_DENIED`, a `cvp-lab-...-drop`, or a `cvp-scope-drop` on Kali (`journalctl -kf | grep cvp-scope-drop`).
-9. **On long runs, every hour or two,** on the gateway:
-   ```
-   sudo cvp-review 1
-   ```
-   Expect: `(none)` under integrity warnings. Read any `FLAGGED` session.
-10. **Only replicas or test systems.** Never point it at production, especially OT/ICS, medical or energy systems.
-
-After:
-
-11. **Review the transcripts** on the gateway (`cvp-run` syncs when Claude Code exits).
-    ```
-    sudo cvp-review
-    ```
-    Expect: `(none)` under integrity warnings. Read every `FLAGGED` session and every one in the random sample. For a second opinion, paste them into a Claude session outside the lab.
-12. **If anything was out of scope:** stop, keep the logs, tell your Anthropic account team (and `security@anthropic.com` within 24/72 h if it meets §1 step 7), and sign Claude Code out on Kali.
-13. **Clear the scope.**
-    ```
-    sudo cvp-scope none
-    ```
-    Expect: `In-scope targets:` with nothing after it.
+1. **Run every engagement from [GUIDE.md](GUIDE.md):** create it, start Claude Code, watch it, pause and resume, finish, and export it to the Windows host.
 
 ---
 
 ## 9. Maintenance
 
-1. **Update Claude Code.**
+1. **Update the lab from this repo** (whenever the repo has changed). On the gateway:
+   ```
+   git -C ~/Mythos-Infra-Requirements pull
+   sudo bash ~/Mythos-Infra-Requirements/gateway/install-gateway.sh
+   sudo cvp-mode update
+   ```
+   Expect: the pull lists the changed files, the installer ends with `Done.`, then `Squid allow-list now: update`.
+
+   Then on Kali (not while Claude Code is running):
+   ```
+   git -C ~/Mythos-Infra-Requirements pull
+   bash ~/Mythos-Infra-Requirements/kali/setup-kali.sh lab
+   ```
+   Expect: the pull lists the changed files (it goes through the proxy to `github.com`), then `lab` ends with `Done.`
+
+   Then on the gateway:
+   ```
+   sudo cvp-mode run
+   ```
+   Expect: `Squid allow-list now: run`. Log out of the Kali desktop and back in, take a new Kali gold snapshot, and repeat §7 steps 4 to 8.
+2. **Update Claude Code.**
    ```
    sudo cvp-mode update        # gateway
    claude update               # Kali
    sudo cvp-mode run           # gateway
    ```
    Expect: `Squid allow-list now: update`, Claude Code reports the new version, then `Squid allow-list now: run`. Then take a new Kali gold snapshot and repeat §7 steps 4 to 8.
-2. **Update Kali tools:** rebuild from §5 on NAT. Don't widen the allow-list for package repos.
-3. **Patch the gateway monthly.**
+3. **Update Kali tools:** rebuild from §5 on NAT. Don't widen the allow-list for package repos.
+4. **Patch the gateway monthly.**
    ```
    sudo apt update && sudo apt upgrade
    ```
    Expect: upgrades install. If apt asks about a changed config file, keep your version.
-4. **Sign in again inside the lab** (if Claude Code says the login expired, or after a snapshot restore): in VMware tick *copy and paste* for Kali; log out of the Kali desktop and back in; run `claude`, type `/login`, press `c`; finish in the host browser with *Continue with Google*; paste the code back; `/exit`; untick *copy and paste*.
+5. **Sign in again inside the lab** (if Claude Code says the login expired, or after a snapshot restore): in VMware tick *copy and paste* for Kali; log out of the Kali desktop and back in; run `claude`, type `/login`, press `c`; finish in the host browser with *Continue with Google*; paste the code back; `/exit`; untick *copy and paste*.
    Expect: `claude auth status --text` shows you signed in.
-5. **Every quarter:** re-read the Anthropic articles listed in [docs/reference.md](docs/reference.md#references), and run `claude auto-mode defaults` for new built-in rules.
-6. **15 Dec 2026:** phishing-resistant MFA deadline (§1 step 3); no API keys after this date.
+6. **Every quarter:** re-read the Anthropic articles listed in [docs/reference.md](docs/reference.md#references), and run `claude auto-mode defaults` for new built-in rules.
+7. **15 Dec 2026:** phishing-resistant MFA deadline (§1 step 3); no API keys after this date.

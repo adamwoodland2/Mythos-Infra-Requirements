@@ -10,8 +10,10 @@
 #   share-key  lets the gateway fetch the public key with `sudo cvp-enrol-key`
 #
 # Synced: ~/.claude/projects/ (session transcripts, JSONL), ~/.claude/debug/,
-# history.jsonl and cvp-runs.log (cvp-run's start/stop record). Credentials
-# (~/.claude/.credentials.json) are deliberately NOT synced.
+# history.jsonl and cvp-runs.log (cvp-run's start/stop record), plus
+# ~/engagements/ (CLAUDE.md, findings, notes), which `cvp-export` on the gateway
+# packages for the host. Credentials (~/.claude/.credentials.json) are
+# deliberately NOT synced.
 #
 # No --delete: after a snapshot restore Kali no longer has earlier engagements'
 # transcripts, and deleting them on the gateway would defeat the point. The
@@ -33,4 +35,9 @@ rsync -az \
   -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new" \
   "$SRC/" "$DEST"
 
-echo "$(date -Is) transcripts synced to $DEST"
+if [[ -d "$HOME/engagements" ]]; then
+  rsync -az -e "ssh -i $KEY -o StrictHostKeyChecking=accept-new" \
+    "$HOME/engagements/" "${DEST}engagements/"
+fi
+
+echo "$(date -Is) transcripts and engagements synced to $DEST"

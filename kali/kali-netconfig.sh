@@ -41,9 +41,12 @@ while IFS=: read -r uuid type; do
   nmcli connection modify "$uuid" connection.autoconnect no
   nmcli connection down "$uuid" >/dev/null 2>&1 || true
 done < <(nmcli -t -f UUID,TYPE connection show)
+# DNS is explicitly 127.0.0.1, where nothing listens, so every lookup fails at
+# once (an empty resolv.conf means the same, but only implicitly). Lab names
+# come from /etc/hosts below.
 nmcli connection add type ethernet ifname "$IF" con-name cvp-lab \
   ipv4.method manual ipv4.addresses "$LAB_IP" \
-  ipv4.never-default yes ipv4.dns "" ipv6.method disabled \
+  ipv4.never-default yes ipv4.dns 127.0.0.1 ipv4.ignore-auto-dns yes ipv6.method disabled \
   connection.autoconnect yes connection.autoconnect-priority 100
 nmcli connection up cvp-lab
 
@@ -79,5 +82,11 @@ echo "  network 4/4: checks"
 [[ -z "$(ip route show default; ip -6 route show default)" ]] || die "a default route exists"
 ip -4 -o addr show dev "$IF" | grep -q " ${LAB_IP} " || die "$LAB_IP is not on $IF"
 [[ -z "$(ip -4 -o addr show scope global | grep -v " ${LAB_IP} ")" ]] || die "extra IPv4 addresses present"
-echo "ok: $IF = $LAB_IP, no default route, no other addresses"
+for _ in 1 2 3 4 5; do       # NetworkManager rewrites resolv.conf as the profile comes up
+  [[ "$(grep -E '^nameserver' /etc/resolv.conf 2>/dev/null)" == "nameserver 127.0.0.1" ]] && break
+  sleep 1
+done
+[[ "$(grep -E '^nameserver' /etc/resolv.conf 2>/dev/null)" == "nameserver 127.0.0.1" ]] ||
+  die "/etc/resolv.conf should list only 'nameserver 127.0.0.1': $(grep -E '^nameserver' /etc/resolv.conf | paste -sd' ')"
+echo "ok: $IF = $LAB_IP, no default route, no other addresses, DNS 127.0.0.1 only"
 

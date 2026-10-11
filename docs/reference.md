@@ -63,20 +63,22 @@ off-host egress control, no static credentials on endpoints.
 | [`gateway/squid.conf`](../gateway/squid.conf) | `/etc/squid/squid.conf` | explicit CONNECT proxy for Kali only, hostname allow-list, logging |
 | [`gateway/allowlist-run.txt`](../gateway/allowlist-run.txt) | `/etc/squid/` | engagement allow-list (2 hosts) |
 | [`gateway/allowlist-login.txt`](../gateway/allowlist-login.txt) | `/etc/squid/` | re-authentication inside the lab (exact hosts) |
-| [`gateway/allowlist-update.txt`](../gateway/allowlist-update.txt) | `/etc/squid/` | `claude update` |
+| [`gateway/allowlist-update.txt`](../gateway/allowlist-update.txt) | `/etc/squid/` | `claude update` and `git pull` of this repo on Kali |
 | [`gateway/cvp-mode.sh`](../gateway/cvp-mode.sh) | `/usr/local/sbin/cvp-mode` | switch allow-lists, show denials |
 | [`gateway/cvp-enrol-key.sh`](../gateway/cvp-enrol-key.sh) | `/usr/local/sbin/cvp-enrol-key` | install Kali's transcript-sync key (write-only, no deletes) |
 | [`gateway/cvp-archive.sh`](../gateway/cvp-archive.sh) | `/usr/local/sbin/cvp-archive` | 5-minute root-only transcript snapshots, tamper check, 45-day prune |
 | [`gateway/cvp-review.sh`](../gateway/cvp-review.sh) | `/usr/local/sbin/cvp-review` | pattern scan of transcripts + random sample of unflagged ones |
+| [`gateway/cvp-export.sh`](../gateway/cvp-export.sh) | `/usr/local/sbin/cvp-export` | package an engagement (folder, transcripts, gateway logs) for the host's shared folder |
 | [`gateway/logrotate-squid`](../gateway/logrotate-squid), [`gateway/logrotate-cvp`](../gateway/logrotate-cvp) | `/etc/logrotate.d/` | 45-day retention for Squid and nftables drop logs |
 | [`kali/setup-kali.sh`](../kali/setup-kali.sh) | run on Kali | `build` (on NAT), `lab` and `share-key` (in the lab) |
 | [`kali/kali-netconfig.sh`](../kali/kali-netconfig.sh) | run by `setup-kali.sh lab` | static IP, no default route, system proxy; fails if anything else is connected |
 | [`kali/managed-settings.json`](../kali/managed-settings.json) | `/etc/claude-code/managed-settings.json` | root-owned Claude Code policy: proxy, claude.ai-only login, Auto Mode rules, model pin |
 | [`kali/cvp-scope.sh`](../kali/cvp-scope.sh), [`kali/cvp-scope.nft`](../kali/cvp-scope.nft) | `/usr/local/sbin/cvp-scope`, `/etc/cvp-scope.nft` | Kali firewall: only the gateway and the engagement's in-scope targets |
 | [`kali/cvp-run.sh`](../kali/cvp-run.sh) | `/usr/local/bin/cvp-run` | pre-flight checks, then Claude Code with a hard time limit |
-| [`kali/sync-transcripts.sh`](../kali/sync-transcripts.sh) | `/usr/local/bin/sync-transcripts` | transcripts to the gateway (every minute via `cvp-sync.timer`) |
-| [`kali/CLAUDE.md.template`](../kali/CLAUDE.md.template) | engagement dir `CLAUDE.md` | per-engagement scope statement |
-| [`kali/CLAUDE.md.no-targets`](../kali/CLAUDE.md.no-targets) | self-check dir `CLAUDE.md` | nothing in scope, for the self-check and escape test |
+| [`kali/cvp-engagement.sh`](../kali/cvp-engagement.sh) | `/usr/local/bin/cvp-engagement` | create, re-scope, list and close engagements under `~/engagements/` |
+| [`kali/sync-transcripts.sh`](../kali/sync-transcripts.sh) | `/usr/local/bin/sync-transcripts` | transcripts and `~/engagements/` to the gateway (every minute via `cvp-sync.timer`) |
+| [`kali/CLAUDE.md.template`](../kali/CLAUDE.md.template) | `/usr/local/share/cvp-lab/` | per-engagement scope statement (`cvp-engagement new` fills it in) |
+| [`kali/CLAUDE.md.no-targets`](../kali/CLAUDE.md.no-targets) | `/usr/local/share/cvp-lab/` | nothing in scope, for the self-check and escape test |
 | [`kali/escape-test-prompt.md`](../kali/escape-test-prompt.md) | - | the sandbox escape test prompt |
 | [`validation/validate-kali.sh`](../validation/validate-kali.sh) | run on Kali | read-only checks of the Kali build |
 | [`validation/validate-windows.ps1`](../validation/validate-windows.ps1) | copy to each target | read-only checks of a Windows target |
@@ -89,6 +91,7 @@ off-host egress control, no static credentials on endpoints.
 | `platform.claude.com` | OAuth token exchange / refresh / revocation | yes | yes | yes |
 | `claude.ai`, `claude.com` (exact) | browser sign-in page and redirect | no | yes | no |
 | `downloads.claude.ai` | native installer / updater | no | no | yes |
+| `github.com` | `git pull` of this public repo on Kali | no | no | yes |
 | everything else in the network-config docs | plugins, MCP connectors, artifacts, telemetry, docs | no | no | no |
 
 Google's sign-in pages are on no list, so a Google sign-in is always finished
@@ -106,6 +109,8 @@ in a browser on the host (D-016).
 | Kali scope drops (`cvp-scope-drop`) | Kali `journalctl -k` | journald |
 | Scope changes | Kali `/var/log/cvp-scope.log` | - |
 | Claude Code run starts/stops | Kali `~/.claude/cvp-runs.log` (also synced) | synced |
+| Engagement folders (synced copy) | gateway `/var/cvp/archive/<time>/kali/engagements/` | 45 days |
+| Engagement exports | gateway `/var/cvp/exports/`, then host `C:\CVP\exports\` | until you delete them |
 
 ## Known gaps (recommended practices this lab doesn't fully meet)
 

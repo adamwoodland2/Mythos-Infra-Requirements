@@ -1,5 +1,7 @@
-# /etc/squid/allowlist-update.txt  -  ONLY while updating Claude Code on Kali
-# Switch to this with:  sudo cvp-mode update    run `claude update` on Kali, then:  sudo cvp-mode run
+# /etc/squid/allowlist-update.txt  -  ONLY while updating Kali (Claude Code or this repo)
+# Switch to this with:  sudo cvp-mode update
+# On Kali: `claude update` and/or `git -C ~/Mythos-Infra-Requirements pull`, then:  sudo cvp-mode run
+# Don't run Claude Code (cvp-run) while this list is active.
 # Source: https://code.claude.com/docs/en/network-config  (Network access requirements)
 
 # --- always ---
@@ -8,3 +10,6 @@ platform.claude.com
 
 # --- native installer, auto-updater and update version checks (v2.1.116 and later) ---
 downloads.claude.ai
+
+# --- git pull of this public repo (HTTPS) ---
+github.com
