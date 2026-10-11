@@ -105,7 +105,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    Test-NetConnection 8.8.8.8
    Test-NetConnection 10.0.3.1 -Port 3128
    ```
-   Expect: `PingSucceeded : False` for the first; `TcpTestSucceeded : False` for the second (the gateway proxy serves Kali only).
+   Expect: `PingSucceeded : False` for the first. For the second, `WARNING: TCP connect to (10.0.3.1 : 3128) failed` and `TcpTestSucceeded : False` (the gateway proxy serves Kali only), while `PingSucceeded : True` (the gateway answers pings from the lab).
 7. **Snapshot the VM** in VMware. Leave it running.
 
 ---
