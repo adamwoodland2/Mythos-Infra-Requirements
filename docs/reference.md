@@ -32,6 +32,15 @@ outbound traffic is limited to an allow-list enforced off the host and logged
 no host adapter, so the only way out is the gateway, which doesn't route and
 only offers a proxy, to Kali alone.
 
+The gateway's own outbound traffic is not filtered (nftables `output` is
+`policy accept`): Squid needs DNS and HTTPS upstream, and apt needs the
+internet. So `curl https://example.com` works when run on the gateway itself;
+that is expected, because nothing in the lab can use that route. Test the proxy
+from Kali. Optional hardening once the build is done: restrict the gateway's
+`output` chain to the Anthropic hosts (`ip daddr { ... } tcp dport 443 accept`
+plus DNS, policy drop). Anthropic's IPs change, so that list needs maintaining
+and apt updates need it relaxed.
+
 ## Required versus recommended
 
 Only the CVP Security Requirements are mandatory. For an individual that is §3

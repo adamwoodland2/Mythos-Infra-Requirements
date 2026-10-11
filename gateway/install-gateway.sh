@@ -145,8 +145,6 @@ EOF
 sysctl --system >/dev/null
 
 echo
-echo "Done. Verify:"
-echo "  sudo nft list ruleset"
-echo "  sudo cvp-mode status"
-echo "  curl -sI https://api.anthropic.com   (from Kali -> expect an HTTP response from Anthropic, NOT 403 from squid)"
-echo "  curl -sI https://example.com         (from Kali -> expect 403 from squid)"
+echo "Done. Next: CHECKLIST.md §3 steps 5 to 7 (firewall, Squid, snapshot timer)."
+echo "Don't test the proxy with curl here: the gateway's own traffic is unfiltered by"
+echo "design, so example.com works from this VM. The proxy tests run on Kali (§6 step 4)."
