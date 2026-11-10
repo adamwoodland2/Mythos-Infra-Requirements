@@ -114,6 +114,12 @@ echo "Egress (through the gateway proxy)"
 code() { curl -s -o /dev/null -m 15 -x http://10.0.3.1:3128 -w '%{http_connect}' "$1"; }
 if [[ "$(code https://api.anthropic.com/)" == 200 ]]; then ok "api.anthropic.com reachable via proxy"; else bad "api.anthropic.com not reachable via proxy"; fi
 if [[ "$(code https://example.com/)" == 403 ]]; then ok "example.com refused by proxy"; else bad "example.com was NOT refused by the proxy"; fi
+# login mode allows claude.ai, update mode github.com
+if [[ "$(code https://claude.ai/)" == 403 && "$(code https://github.com/)" == 403 ]]; then
+  ok "gateway in run mode (claude.ai and github.com refused)"
+else
+  bad "gateway not in run mode (claude.ai or github.com allowed) - on the gateway: sudo cvp-mode run"
+fi
 
 echo "Host"
 sudo -k
@@ -135,6 +141,11 @@ if pkill -u "$USER" -f 'vmtoolsd -n vmusr'; then
   warn "stopped the VMware user agent (copy/paste, drag and drop) for this login"
 fi
 if systemctl is-active --quiet cvp-sync.timer; then ok "transcript sync timer running"; else bad "cvp-sync.timer not running"; fi
+if /usr/local/bin/sync-transcripts >/dev/null 2>&1; then
+  ok "transcripts sync to the gateway"
+else
+  bad "transcript sync to the gateway failed - run sync-transcripts to see why"
+fi
 
 if [[ $fail -ne 0 ]]; then
   echo

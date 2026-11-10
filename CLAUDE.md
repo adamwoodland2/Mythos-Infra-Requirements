@@ -3,7 +3,7 @@
 Build files for an isolated VMware Workstation lab running Claude Code (Kali) under
 the Anthropic Cyber Verification Program, Defense Access for Individuals tier.
 CHECKLIST.md is the build runbook; GUIDE.md is how to run an engagement (create, run,
-finish, export); docs/reference.md lists every file, log, allow-list and known gap;
+finish, export); docs/reference.md lists every file, log, allow-list and accepted weakness;
 docs/decisions.md records why. The repo is cloned to ~/Mythos-Infra-Requirements on the
 gateway and on Kali; on Windows targets the .ps1 is downloaded by hand.
 
@@ -30,6 +30,8 @@ Conventions:
   pass `bash -n` and shellcheck, managed-settings.json parses. squid.conf with all three
   allow-lists passes `squid -k parse` and a loopback CONNECT test on Squid 7.2 (Ubuntu
   26.04 package) and runs unchanged on 7.7. setup-kali.sh, cvp-run, cvp-scope and
-  cvp-engagement have run on Kali 2026.3; cvp-run's VMware checks and cvp-scope in
-  /usr/local/bin have not yet. The .vmx backdoor settings (D-024) are tested on Kali,
-  not on a Windows target. Windows targets are configured by hand (no scripts).
+  cvp-engagement have run on Kali 2026.3. The .vmx backdoor settings (D-024) are
+  tested on Kali, not on a Windows target. The D-024 and D-025 script changes
+  (Nov 2026) pass `bash -n` only: shellcheck, `nft -c` on cvp-scope.nft and a run on
+  the rebuilt gateway and Kali are still to do. Windows targets are configured by
+  hand (no scripts).

@@ -8,7 +8,7 @@ How to run an engagement once the lab is built ([CHECKLIST.md](CHECKLIST.md)). D
 
 ## 1. Start an engagement
 
-1. **Restore the Kali gold snapshot** and the snapshots of the targets you'll use (VMware → VM → Snapshot → Snapshot Manager → gold → *Go To*), then power them on.
+1. **Restore the Kali gold snapshot** and the snapshots of the targets you'll use (VMware → VM → Snapshot → Snapshot Manager → gold → *Go To*), then power them on. Leave every other target powered off.
    Expect: Kali boots to the desktop, and `cvp-scope status` shows `In-scope targets:` with nothing after it.
 2. **Check the gateway is in run mode** (gateway console).
    ```
@@ -72,13 +72,13 @@ How to run an engagement once the lab is built ([CHECKLIST.md](CHECKLIST.md)). D
    sudo cvp-review 1
    ```
    Expect: `(none)` under integrity warnings. Read any `FLAGGED` session.
-5. **Never point it at production,** especially OT/ICS, medical or energy systems. Replicas and test systems only.
+5. **Never point it at production,** especially OT/ICS, medical or energy systems. Replicas and test systems only, holding only synthetic or approved, sanitised data.
 
 ---
 
 ## 3. Pause and resume
 
-1. **To stop at once:** press Ctrl+C twice in Claude Code (or suspend the Kali VM in VMware).
+1. **To stop at once:** press Ctrl+C twice in Claude Code. In an emergency, suspend Kali and every running target in VMware instead.
    Expect: back at the shell; `cvp-run` syncs and prints `... synced to cvpsync@10.0.3.1:kali/`. If the time limit ran out instead, it first prints `Time limit reached - Claude Code was stopped.`
 2. **To carry on later** (if you suspended Kali, run `sudo reboot` in it first):
    ```
@@ -100,12 +100,12 @@ How to run an engagement once the lab is built ([CHECKLIST.md](CHECKLIST.md)). D
    ```
    cvp-engagement close <name>
    ```
-   Expect: `... transcripts and engagements synced to cvpsync@10.0.3.1:kali/`, then `In-scope targets:` with nothing after it, then `Closed <name>.`
+   Expect: `In-scope targets:` with nothing after it, then `... transcripts and engagements synced to cvpsync@10.0.3.1:kali/`, then `Closed <name>.`
 3. **Review the transcripts** (gateway).
    ```
    sudo cvp-review
    ```
-   Expect: `(none)` under integrity warnings. Read every `FLAGGED` session and every one in the random sample. For a second opinion, paste them into a Claude session outside the lab after §5.
+   Expect: `(none)` under integrity warnings. Read every `FLAGGED` session and every one in the random sample.
 4. **If anything was out of scope:** keep the logs, tell your Anthropic account team (and `security@anthropic.com` within 24/72 h if it meets CHECKLIST §1 step 7), and sign Claude Code out on Kali.
 
 ---
@@ -139,12 +139,13 @@ Each time:
    tar -xzf C:\CVP\exports\<name>-<time>.tar.gz -C C:\CVP\exports
    ```
    Expect: a folder `<name>-<time>` containing `engagement`, `transcripts`, `gateway-logs`, `cvp-runs.log` and `SHA256SUMS`.
-6. **Turn the share off:** gateway VM → Settings → Options → Shared Folders → *Disabled* (or leave it to lapse at the next power-off).
+6. **Turn the share off:** gateway VM → Settings → Options → Shared Folders → *Disabled*.
+   Expect: on the gateway, `vmware-hgfsclient` prints nothing.
 7. **Delete the gateway's copy of the archive** once it's safely stored.
    ```
    sudo rm /var/cvp/exports/<name>-<time>.tar.gz
    ```
-   Expect: no output. The synced snapshots stay in `/var/cvp/archive` for 45 days.
+   Expect: no output. The synced snapshots stay in `/var/cvp/archive` for 45 days, and the newest one until the gateway is rebuilt.
 
 What the archive holds:
 

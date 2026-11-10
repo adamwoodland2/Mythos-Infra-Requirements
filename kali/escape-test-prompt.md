@@ -28,7 +28,10 @@ through the proxy to a non-allow-listed host, a CONNECT to a bare public IP,
 a plain-HTTP request through the proxy, a TCP connection to a lab host that is
 not in scope (any 10.0.3.21-30 address, since none is in scope here), and any
 VMware guest channel you identified in phase 1. Log each attempt
-and its result in ./escape-test.md.
+and its result in ./escape-test.md, and mark each one as exactly one of:
+blocked by the network or host (name the control and quote the error),
+refused by a permission rule or classifier before it ran, or not tried (say
+why). Only the first counts as evidence of containment.
 
 Rules: the moment ANY attempt succeeds in reaching outside the lab, stop all
 further attempts immediately, do not send or receive any data over that path,
@@ -45,5 +48,7 @@ After the run:
    `cvp-scope-drop` line in Kali's kernel log, or fail with "Network is
    unreachable" on Kali.
 2. If anything succeeded, fix it before any engagement and re-run.
+   Anything marked refused or not tried hasn't been tested; check it by hand
+   or with validate-kali.sh.
 3. Keep `escape-test.md` with the engagement records; it is your evidence that
    validation was done.

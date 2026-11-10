@@ -5,7 +5,8 @@
 #   bash kali/setup-kali.sh build       Phase A, on NAT: update Kali, install Claude Code, sign in,
 #                                       managed settings, sync key
 #   bash kali/setup-kali.sh lab         Phase B, on the lab segment: network, scope firewall,
-#                                       cvp-run, cvp-engagement, transcript sync and timer.
+#                                       managed settings, cvp-run, cvp-engagement, transcript
+#                                       sync and timer.
 #                                       Safe to re-run; re-run it after pulling repo updates.
 #   bash kali/setup-kali.sh share-key   Phase B: serve the sync PUBLIC key for `sudo cvp-enrol-key`
 #                                       on the gateway
@@ -21,6 +22,25 @@ KEY="$HOME/.ssh/cvpsync"
 
 die() { echo "$*" >&2; exit 1; }
 [[ $EUID -ne 0 ]] || die "run as your normal user, not root (Claude Code installs per user)"
+
+install_settings() {   # install_settings <org> <model> - root-owned managed settings from the repo copy
+  local tmp
+  tmp="$(mktemp)"
+  python3 - "$HERE/managed-settings.json" "$1" "$2" > "$tmp" <<'PY'
+import json, sys
+path, org, model = sys.argv[1:]
+s = json.load(open(path))
+s["autoMode"]["environment"] = [e.replace("<YOUR BUSINESS NAME>", org) for e in s["autoMode"]["environment"]]
+if model:
+    s["model"] = model
+    s["availableModels"] = [model]
+    s["enforceAvailableModels"] = True
+print(json.dumps(s, indent=2))
+PY
+  sudo install -d -m 0755 /etc/claude-code
+  sudo install -m 0644 -o root -g root "$tmp" /etc/claude-code/managed-settings.json
+  rm -f "$tmp"
+}
 
 build() {
   echo "[1/6] update Kali and install prerequisites"
@@ -96,21 +116,10 @@ build() {
   fi
 
   echo "[5/6] managed settings and lab config (root-owned, so Claude can't change them)"
+  install_settings "$org" "$model"
   tmp="$(mktemp)"
-  python3 - "$HERE/managed-settings.json" "$org" "$model" > "$tmp" <<'PY'
-import json, sys
-path, org, model = sys.argv[1:]
-s = json.load(open(path))
-s["autoMode"]["environment"] = [e.replace("<YOUR BUSINESS NAME>", org) for e in s["autoMode"]["environment"]]
-if model:
-    s["model"] = model
-    s["availableModels"] = [model]
-    s["enforceAvailableModels"] = True
-print(json.dumps(s, indent=2))
-PY
-  sudo install -d -m 0755 /etc/claude-code
-  sudo install -m 0644 -o root -g root "$tmp" /etc/claude-code/managed-settings.json
-  printf 'CVP_USER=%q\nCVP_ACCOUNT_EMAIL=%q\nCVP_MODEL=%q\n' "$USER" "$email" "$model" > "$tmp"
+  # lab re-reads CVP_ORG and CVP_MODEL to reinstall the managed settings
+  printf 'CVP_USER=%q\nCVP_ACCOUNT_EMAIL=%q\nCVP_MODEL=%q\nCVP_ORG=%q\n' "$USER" "$email" "$model" "$org" > "$tmp"
   sudo install -m 0644 -o root -g root "$tmp" /etc/cvp-lab.conf
   rm -f "$tmp"
 
@@ -158,7 +167,11 @@ ExecStart=/usr/local/bin/cvp-scope boot
 WantedBy=multi-user.target
 EOF
 
-  echo "[3/4] cvp-run and cvp-engagement, with the CLAUDE.md templates"
+  echo "[3/4] managed settings, cvp-run and cvp-engagement, with the CLAUDE.md templates"
+  # shellcheck source=/dev/null
+  . /etc/cvp-lab.conf
+  [[ -n "${CVP_ORG:-}" ]] || die "/etc/cvp-lab.conf has no CVP_ORG - run '$0 build' again"
+  install_settings "$CVP_ORG" "${CVP_MODEL:-}"
   sudo install -m 0755 -o root -g root "$HERE/cvp-run.sh" /usr/local/bin/cvp-run
   sudo install -m 0755 -o root -g root "$HERE/cvp-engagement.sh" /usr/local/bin/cvp-engagement
   sudo install -d -m 0755 /usr/local/share/cvp-lab
@@ -188,7 +201,9 @@ OnUnitActiveSec=1min
 WantedBy=timers.target
 EOF
   sudo systemctl daemon-reload
-  sudo systemctl enable --now cvp-scope.service cvp-sync.timer
+  sudo systemctl enable cvp-scope.service cvp-sync.timer
+  # restart, not just start, so a re-run loads the current rules (the scope resets to none)
+  sudo systemctl restart cvp-scope.service cvp-sync.timer
 
   cat <<EOF
 

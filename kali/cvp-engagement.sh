@@ -92,8 +92,8 @@ close() {
   local name="${1:-}"
   check_name "$name"
   [[ -d "$ROOT/$name" ]] || die "no $ROOT/$name"
+  sudo cvp-scope none         # first, so a failed sync can't leave targets in scope
   sync-transcripts
-  sudo cvp-scope none
   echo "Closed $name. On the gateway: sudo cvp-review, then sudo cvp-export $name"
 }
 

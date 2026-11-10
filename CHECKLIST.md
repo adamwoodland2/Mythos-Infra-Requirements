@@ -2,7 +2,7 @@
 
 Do the steps in order. Each step says what to do and what you should see. If you don't see it, stop and sort that out before going on.
 
-Part 1 is required by the CVP Security Requirements; the rest is Anthropic's recommended containment practice, which this lab follows. Addresses, files, logs and known gaps: [docs/reference.md](docs/reference.md). Why things are built this way: [docs/decisions.md](docs/decisions.md).
+Part 1 is required by the CVP Security Requirements; the rest is Anthropic's recommended containment practice, which this lab follows. Addresses, files, logs and accepted weaknesses: [docs/reference.md](docs/reference.md). Why things are built this way: [docs/decisions.md](docs/decisions.md).
 
 Addresses: gateway `10.0.3.1` (`ens33` NAT, `ens37` lab) · Kali `10.0.3.11` · Windows targets `10.0.3.21-30` (`win-app-01` ... `win-app-10`).
 
@@ -90,7 +90,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
 2. **Download the validation script** (still on NAT): in a browser open `github.com/adamwoodland2/Mythos-Infra-Requirements`, go to `validation/validate-windows.ps1`, click *Download raw file*, and save it as `C:\validate-windows.ps1`.
    Expect: `C:\validate-windows.ps1` exists.
 3. **Shut down and move the VM into the lab.**
-   1. In VMware: the only adapter → LAN segment `cvp-lab`; Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*.
+   1. In VMware: the only adapter → LAN segment `cvp-lab`; Sound Card → *Remove*; USB Controller → untick *Automatically connect new USB devices* and *Share Bluetooth devices with the virtual machine*; Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*.
    2. Quit VMware Workstation. In Notepad, open the VM's `.vmx` file (in the VM's folder), change `vmci0.present = "TRUE"` to `vmci0.present = "FALSE"`, add the line below, and save.
       ```
       monitor_control.restrict_backdoor = "TRUE"
@@ -148,7 +148,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
 ## 6. Kali VM - into the lab
 
 1. **Move Kali into the lab.**
-   1. In VMware: adapter → LAN segment `cvp-lab` (remove any other adapter); Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*.
+   1. In VMware: adapter → LAN segment `cvp-lab` (remove any other adapter); Sound Card → *Remove*; USB Controller → untick *Automatically connect new USB devices* and *Share Bluetooth devices with the virtual machine*; Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*.
    2. Quit VMware Workstation. In Notepad, open the VM's `.vmx` file (in the VM's folder, e.g. `Mythos Kali.vmx`), change `vmci0.present = "TRUE"` to `vmci0.present = "FALSE"`, add the line below, and save.
       ```
       monitor_control.restrict_backdoor = "TRUE"
@@ -243,7 +243,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    ```
    bash ~/Mythos-Infra-Requirements/validation/validate-kali.sh 10.0.3.21
    ```
-   Expect: `ALL AUTOMATED CHECKS PASSED` (it reports `win-app-01` as blocked by cvp-scope).
+   Expect: `ALL AUTOMATED CHECKS PASSED` (it reports no ping reply from `win-app-01`).
 2. **Run them again with the target in scope.**
    ```
    sudo cvp-scope set 10.0.3.21
@@ -269,8 +269,9 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    ```
    Expect: `All checks passed. Starting Claude Code with a 1h limit.`
 6. **Paste the test prompt:** everything between the two `---` lines in [kali/escape-test-prompt.md](kali/escape-test-prompt.md). Watch it run.
-   Expect: every attempt fails. The gateway window shows `TCP_DENIED` or `cvp-lab-...-drop` lines, and `journalctl -k | grep cvp-scope-drop` on Kali shows the blocked lab-host attempts. Claude writes `escape-test.md` and reports which controls held.
+   Expect: every attempt fails. The gateway window shows `TCP_DENIED` or `cvp-lab-...-drop` lines, and `journalctl -k | grep cvp-scope-drop` on Kali shows the blocked lab-host attempts. Claude writes `escape-test.md`, marks each attempt *blocked*, *refused* or *not tried*, and reports which controls held.
    If anything gets out: stop, fix it, and repeat steps 5 to 6.
+   If anything is marked *refused* or *not tried*: check it by hand.
 7. **Keep `~/engagements/escape-test/escape-test.md`** as evidence (never in the repo).
 8. **Shut Kali down, then take the Kali gold snapshot** in VMware. Delete any older Kali snapshots.
 
@@ -312,11 +313,11 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    ```
    Expect: `Squid allow-list now: update`, Claude Code reports the new version, then `Squid allow-list now: run`. Then repeat §7 steps 4 to 8 (step 8 takes the new gold snapshot).
 3. **Update Kali tools:** rebuild from §5 on NAT. Don't widen the allow-list for package repos.
-4. **Patch the gateway monthly.**
+4. **Patch monthly:** the gateway, the Windows host and VMware Workstation. On the gateway:
    ```
    sudo apt update && sudo apt upgrade
    ```
-   Expect: upgrades install. If apt asks about a changed config file, keep your version.
+   Expect: upgrades install. If apt asks about a changed config file, keep your version. On the host, Windows Update shows nothing pending and VMware Workstation is on its current release.
 5. **Sign in again inside the lab** (if Claude Code says the login expired, or after a snapshot restore): in VMware tick *copy and paste* for Kali; log out of the Kali desktop and back in; run `claude`, type `/login`, press `c`; finish in the host browser with *Continue with Google*; paste the code back; `/exit`; untick *copy and paste*.
    Expect: `claude auth status --text` shows you signed in.
 6. **Every quarter:** re-read the Anthropic articles listed in [docs/reference.md](docs/reference.md#references), and run `claude auto-mode defaults` for new built-in rules.

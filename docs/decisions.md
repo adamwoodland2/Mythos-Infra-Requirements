@@ -105,7 +105,7 @@ shows when the wider list was active.
 
 ## D-007 OAuth credential stays on Kali (gap accepted for now)
 
-**Date:** 2026-10-07, revised 2026-10-09 · **Status:** active - known gap, see docs/reference.md (Known gaps)
+**Date:** 2026-10-07, revised 2026-10-09 · **Status:** active - accepted risk, see docs/reference.md (Weaknesses accepted as risk)
 
 CB 1.a wants "the API key injected from outside the sandbox". SR §3.2 requires
 OAuth rather than keys for individuals, and Claude Code's OAuth refresh token
@@ -307,7 +307,7 @@ rejected because growing transcripts have to be re-sent.
 
 ## D-019 Target scope enforced on Kali; the gateway serves Kali only
 
-**Date:** 2026-10-09 · **Status:** active - partial, see docs/reference.md (Known gaps)
+**Date:** 2026-10-09 · **Status:** active - partial, see docs/reference.md (Weaknesses accepted as risk)
 
 The guidance recommends enforcing engagement scope in the network ("allow-list
 egress to the model API endpoint and explicitly in-scope targets"). Kali and
@@ -320,8 +320,10 @@ the targets share one /24 segment, so their traffic never crosses the gateway.
 - It is on-host, so it holds only while the agent has no root (`cvp-run` also
   refuses to start if passwordless sudo works). A root process could flush it
   or send raw frames past it.
-- Squid's `src` ACL and the nftables 3128 rule now admit only 10.0.3.11, so a
-  compromised Windows target can't use the proxy to reach the Anthropic hosts.
+- Squid's `src` ACL and the nftables 3128 rule now admit only 10.0.3.11. A
+  compromised Windows target can still use the proxy by taking over that
+  address, but only to reach the Anthropic hosts Kali already reaches
+  (corrected in D-025).
 
 Off-host enforcement would need the targets on their own LAN segment with the
 gateway routing Kali to in-scope targets only. That changes the 10.0.3.21-30
@@ -448,3 +450,55 @@ by design. There it only stops ordinary programs: code in the kernel (an
 administrator loading a driver) may still use the backdoor. The gateway keeps
 both, because `cvp-export` reaches the host through a VMware shared folder, and
 the agent runs nothing there.
+
+## D-025 November 2026 review: fixes, and the weaknesses accepted
+
+**Date:** 2026-11-10 · **Status:** active
+
+An external review of the design raised nine findings (numbered below as in
+the review). Fixed:
+
+1. Root on the gateway handled uploaded files unsafely (finding 1). rrsync lets
+   Kali upload symlinks: an uploaded `.snapshot` symlink made `cvp-archive`'s
+   `touch` reach outside the archive (it could create `/etc/nologin`),
+   `cvp-export`'s `cp -a "$d/."` would follow a symlinked project folder, and
+   `cvp-review` used `find -L`. Snapshots now take regular files and folders
+   only (`rsync --no-links --no-D`), `/.snapshot` is excluded from the copy,
+   and `cvp-review` uses `find -H`. Export and review read only snapshots,
+   never `incoming`.
+2. `cvp-run` passed in login and update modes (4). It now also requires
+   `claude.ai` and `github.com` to be refused, and `cvp-mode login|update`
+   switch back to run after 30 minutes through a transient systemd timer.
+3. Taking a target out of scope left its open connections working, because
+   the scope firewall accepted all established traffic first (5). Established
+   traffic is now accepted only to the gateway; every packet to a target is
+   checked against the set. `cvp-engagement close` clears the scope before it
+   syncs, so a failed sync can't leave targets in scope.
+4. An active sync timer didn't prove that sync worked (6). `cvp-run` now syncs
+   once before starting. `cvp-archive` stops snapshotting above 80% disk use
+   and logs `LOW-SPACE`, keeping room for Squid's and nftables' logs.
+5. `setup-kali.sh lab` didn't reinstall the managed settings or reload the
+   scope firewall, so the §9 update path left them stale (7). It now does
+   both; build records the business name in `/etc/cvp-lab.conf` for this.
+6. Smaller ones (8, 9 and the host note): the escape test marks each attempt
+   blocked, refused or not tried; validation no longer reports a failed ping
+   as proof the firewall blocked it; the gateway share is turned off after
+   every export, and the suggestion to paste transcripts into another Claude
+   session is gone, because exports are untrusted content; targets that aren't
+   in scope stay powered off; targets hold only synthetic or approved,
+   sanitised data, because everything Claude reads goes to Anthropic; Kali and
+   the targets lose their sound card, USB auto-connect and Bluetooth sharing;
+   monthly patching covers the Windows host and VMware Workstation.
+
+D-019's claim that targets can't use the proxy was wrong: a target that takes
+over Kali's address can, though only to the two Anthropic hosts.
+
+Accepted, and listed in docs/reference.md (Weaknesses accepted as risk): the
+shared network segment (2), since separating it means re-addressing the
+Windows targets, which are being kept; programs Claude runs sharing its
+identity and credentials (3), since Claude Code's Bash sandbox routes traffic
+through its own proxy and would break tools that talk to the targets;
+processes outliving the time limit (5), with the hypervisor as the backstop;
+checks that run without root (7, 8); no hard quota on the gateway disk (6);
+and the shared Windows host. The owner judged these a reasonable balance for a
+supervised lab that tests replica systems rather than hostile code.

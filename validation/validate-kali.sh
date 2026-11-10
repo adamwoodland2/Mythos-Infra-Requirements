@@ -6,7 +6,8 @@
 #
 # The target defaults to 10.0.3.21. If it is in the cvp-scope set
 # (`sudo cvp-scope set <ip>`) the script checks it is reachable; if not, it
-# checks the scope firewall blocks it. No configuration is changed. The script
+# checks it gets no reply. A target that is down passes that too, so run it both
+# ways (CHECKLIST §7 steps 1 and 2). No configuration is changed. The script
 # exits 0 only when every check passes, otherwise it exits 1.
 
 set -uo pipefail
@@ -132,8 +133,8 @@ ping_reachable() {
   ping -c 1 -W 2 "$1" >/dev/null 2>&1
 }
 
-scope_firewall_loaded() {
-  [[ -e "$SCOPE_STATE" ]]
+scope_firewall_loaded() {   # without root the ruleset itself can't be listed
+  systemctl is-active --quiet cvp-scope.service && [[ -e "$SCOPE_STATE" ]]
 }
 
 target_in_scope() {
@@ -225,11 +226,11 @@ check "Claude Code is at least version ${MIN_CLAUDE}" claude_version_ok
 check "Claude Code reports a valid signed-in session" claude_auth_ok
 check "Claude Code accepts the effective Auto Mode configuration" claude_auto_mode_ok
 check "gateway responds on the lab segment" ping_reachable "$GATEWAY_IP"
-check "cvp-scope firewall is loaded" scope_firewall_loaded
+check "cvp-scope service has run (service active, state file present)" scope_firewall_loaded
 if target_in_scope; then
   check "Windows target ${TARGET_IP} (in scope) responds on the lab segment" ping_reachable "$TARGET_IP"
 else
-  check "Windows target ${TARGET_IP} (not in scope) is blocked by cvp-scope" target_blocked_by_scope
+  check "Windows target ${TARGET_IP} (not in scope) gets no ping reply (blocked, or down - run again in scope to tell)" target_blocked_by_scope
 fi
 check "${TARGET_NAME} resolves to ${TARGET_IP} through /etc/hosts" hosts_entry_matches "$TARGET_NAME" "$TARGET_IP"
 check "Squid is reachable at ${GATEWAY_IP}:3128" tcp_reachable "$GATEWAY_IP" 3128

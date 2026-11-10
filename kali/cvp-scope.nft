@@ -3,8 +3,9 @@
 #
 # Kali may start connections only to the gateway (proxy, transcript sync, ping)
 # and to the engagement's in-scope targets. The target set is EMPTY after every
-# boot; `sudo cvp-scope set <IP>...` fills it for an engagement. Replies to
-# connections a target opens (e.g. a reverse shell) pass as established traffic.
+# boot; `sudo cvp-scope set <IP>...` fills it for an engagement. Every packet
+# to a target is checked against the set, replies included, so taking a target
+# out of scope also cuts its open connections (e.g. a reverse shell).
 #
 # This runs on Kali itself, so it holds only while the agent has no root: it
 # stops mistakes and unprivileged tools, not a process that can run nft.
@@ -20,7 +21,7 @@ table inet cvp_scope {
     chain output {
         type filter hook output priority 0; policy drop;
         oifname "lo" accept
-        ct state established,related accept
+        ip daddr 10.0.3.1 ct state established,related accept
         ip daddr 10.0.3.1 tcp dport { 22, 3128 } accept
         ip daddr 10.0.3.1 icmp type echo-request accept
         ip daddr @targets accept

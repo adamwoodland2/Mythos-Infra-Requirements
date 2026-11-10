@@ -103,21 +103,30 @@ in a browser on the host (D-016).
 |---|---|---|
 | Proxy requests (allowed and `TCP_DENIED`) | gateway `/var/log/squid/access.log` | 45 days |
 | Gateway firewall drops (`cvp-lab-*-drop`) | gateway `/var/log/cvp-lab-nft.log` | 45 days |
-| Transcript snapshots | gateway `/var/cvp/archive/` (`latest` = newest) | 45 days |
-| Snapshot integrity warnings | gateway `/var/log/cvp-transcripts.log` | 12 months |
+| Transcript snapshots | gateway `/var/cvp/archive/` (`latest` = newest) | 45 days; the newest until the gateway is rebuilt |
+| Snapshot integrity and disk warnings | gateway `/var/log/cvp-transcripts.log` | 12 months |
 | Allow-list mode switches | gateway `/var/log/cvp-mode.log` | 12 months |
 | Kali scope drops (`cvp-scope-drop`) | Kali `journalctl -k` | journald |
 | Scope changes | Kali `/var/log/cvp-scope.log` | - |
 | Claude Code run starts/stops | Kali `~/.claude/cvp-runs.log` (also synced) | synced |
-| Engagement folders (synced copy) | gateway `/var/cvp/archive/<time>/kali/engagements/` | 45 days |
+| Engagement folders (synced copy) | gateway `/var/cvp/archive/<time>/kali/engagements/` | 45 days; the newest until the gateway is rebuilt |
 | Engagement exports | gateway `/var/cvp/exports/`, then host `C:\CVP\exports\` | until you delete them |
 
-## Known gaps (recommended practices this lab doesn't fully meet)
+## Weaknesses accepted as risk
+
+Known weaknesses, accepted for a supervised lab that tests replica systems
+rather than hostile code. Each says what limits it. Those from the November
+2026 review are recorded in D-025.
 
 - **The model credential is inside the sandbox.** The OAuth login lives in `~/.claude/` on Kali, as the same user Claude Code runs as. The guidance recommends a credential proxy outside the sandbox; its reference design uses a `claude setup-token` token, which is long-lived, and the Security Requirements forbid long-lived credentials after 15 Dec 2026. Check with your account team before building it. Mitigations here: `blockReadsOutsideWorkingDirectories`, `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, the `hard_deny` rule, no passwordless sudo, snapshot restore between runs, and revoking the login if the VM is ever suspect (D-007).
-- **Target scope is enforced on Kali, not off-host.** Targets share the lab segment with Kali, so the gateway never sees Kali-to-target traffic. `cvp-scope` holds while the agent has no root. Off-host enforcement would mean moving the targets to their own segment routed through the gateway (D-019).
+- **Programs Claude runs share its identity.** Everything the agent executes runs as the operator's Kali user, so it could read the OAuth login, change user-owned files (including the Claude Code binary under `~/.local`, which is what enforces the managed settings), edit transcripts before they sync, or start processes that outlive the session. Claude Code's Bash sandbox isn't used: it sends network traffic through its own allow-list proxy, so tools that talk to the targets wouldn't run inside it. Limits: no passwordless sudo, root-owned managed settings and firewall, the tampering `soft_deny` rule, and snapshot restore between engagements. Optional, untested: install the Claude Code binary root-owned (D-025).
+- **Targets share Kali's network segment.** The gateway never sees Kali-to-target traffic, and `cvp-scope` holds only while the agent has no root (D-019). A compromised target can reach every other running target directly, so targets that aren't in scope stay powered off (GUIDE §1 step 1). A target that takes over Kali's address can use the proxy, but only to reach api.anthropic.com and platform.claude.com, which the agent on Kali can reach anyway, and it disrupts Kali's own traffic while it does. Off-host enforcement would mean re-addressing the targets onto their own segment, routed through the gateway (D-025).
+- **The time limit covers only what runs inside the `cvp-run` scope.** A process started outside it (e.g. with `systemd-run --user`) outlives the limit, and anything already running on a target carries on. The backstop is the hypervisor: suspend Kali and every running target (GUIDE §3 step 1) (D-025).
 - **Transcripts are written by the agent's own process.** They are synced every minute and snapshotted every 5 minutes into a root-only area of the gateway, with in-place edits flagged, so later tampering is caught but anything faked before the first sync is not. The Squid and nftables logs are the independent record (D-018).
+- **The gateway disk has no hard quota.** Kali can upload without limit. `cvp-archive` stops snapshotting at 80% used and logs `LOW-SPACE` (shown by `cvp-review`), but uploads still land in `/var/cvp/incoming`, and a full disk would stop Squid's and nftables' logging. A second virtual disk for `/var/cvp` would cap it. Engagement material stays on the gateway (in `incoming` and the newest snapshot) until the gateway is rebuilt or it is deleted by hand (D-025).
+- **Checks without root see less than their names suggest.** `cvp-run` and `validate-kali.sh` read cvp-scope's service and state file, not the live ruleset. A target that doesn't answer ping may be blocked or down, which is why CHECKLIST §7 runs the check both in and out of scope. The escape test also exercises the permission rules, so its report marks each attempt *blocked*, *refused* or *not tried*; only *blocked* is evidence of containment (D-025).
 - **Kernel code can still reach the hypervisor.** `restrict_backdoor` stops ordinary programs using the VMware backdoor and the VMCI device is removed, but code in a guest's kernel may still use the backdoor. On Kali the agent has no root; on a target it can become administrator by design. The gateway keeps both for `cvp-export` (D-024).
+- **The lab shares the Windows host.** An escape through VMware itself would land on the host, so the host holds no production credentials and joins no client networks, and it and VMware Workstation are patched monthly (CHECKLIST §9 step 4). A dedicated host isn't planned (D-025).
 - **No turn limit in interactive sessions.** Claude Code offers `--max-turns` only for `-p` runs; interactive runs rely on supervision and the `cvp-run` time limit.
 - **`ask` rules are prefix matches.** `Bash(ssh *)` won't catch `/usr/bin/ssh`, `env ssh` or `bash -c "ssh ..."`. They are a convenience, not a boundary.
 - **The sandbox escape classifier isn't available to Claude Code.**

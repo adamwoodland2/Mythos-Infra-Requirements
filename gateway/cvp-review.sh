@@ -4,7 +4,7 @@
 #   sudo cvp-review [DAYS]     sessions changed in the last DAYS days (default 7)
 #
 # Prints, from the latest archive snapshot:
-#   1. integrity warnings (NON-APPEND / MISSING) logged by cvp-archive
+#   1. integrity and disk warnings (NON-APPEND / MISSING / LOW-SPACE) logged by cvp-archive
 #   2. every session with hits on the patterns below, with counts per pattern
 #   3. a random sample (SAMPLE_PCT, default 10%) of the sessions with NO hits
 # Read every flagged session and the sample in full. The patterns are cheap
@@ -31,9 +31,10 @@ PATTERNS=(
 [[ -d "$LATEST" ]] || { echo "no snapshots yet in /var/cvp/archive" >&2; exit 1; }
 
 echo "=== integrity warnings (all time)"
-grep -E 'NON-APPEND|MISSING' "$LOG" 2>/dev/null || echo "(none)"
+grep -E 'NON-APPEND|MISSING|LOW-SPACE' "$LOG" 2>/dev/null || echo "(none)"
 
-mapfile -d '' sessions < <(find -L "$LATEST" -path '*/projects/*' -name '*.jsonl' -mtime -"$DAYS" -print0)
+# -H follows the `latest` link itself and nothing inside the snapshot
+mapfile -d '' sessions < <(find -H "$LATEST" -path '*/projects/*' -name '*.jsonl' -mtime -"$DAYS" -print0)
 echo
 echo "=== ${#sessions[@]} session(s) changed in the last $DAYS day(s)"
 
