@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# /usr/local/sbin/cvp-scope  -  set which lab targets Kali may connect to
+# /usr/local/bin/cvp-scope  -  set which lab targets Kali may connect to
 #
 #   sudo cvp-scope set 10.0.3.21 [10.0.3.22 ...]   replace the in-scope set (targets are .21-.30)
 #   sudo cvp-scope none                             no targets (also the state after every boot)

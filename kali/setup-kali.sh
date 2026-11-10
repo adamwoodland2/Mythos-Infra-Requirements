@@ -139,7 +139,8 @@ lab() {
 
   echo "[2/4] scope firewall (no targets until 'sudo cvp-scope set ...')"
   sudo install -m 0644 -o root -g root "$HERE/cvp-scope.nft" /etc/cvp-scope.nft
-  sudo install -m 0755 -o root -g root "$HERE/cvp-scope.sh" /usr/local/sbin/cvp-scope
+  # /usr/local/bin like cvp-run: on Kali neither the user's PATH nor sudo finds /usr/local/sbin
+  sudo install -m 0755 -o root -g root "$HERE/cvp-scope.sh" /usr/local/bin/cvp-scope
   sudo tee /etc/systemd/system/cvp-scope.service >/dev/null <<'EOF'
 [Unit]
 Description=CVP lab outbound scope firewall (no targets until cvp-scope set)
@@ -151,7 +152,7 @@ Wants=network-pre.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/sbin/cvp-scope boot
+ExecStart=/usr/local/bin/cvp-scope boot
 
 [Install]
 WantedBy=multi-user.target

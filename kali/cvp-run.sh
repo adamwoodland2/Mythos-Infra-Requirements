@@ -119,6 +119,18 @@ echo "Host"
 sudo -k
 if sudo -n true 2>/dev/null; then bad "passwordless sudo works - the agent could undo the scope and read anything"; else ok "no passwordless sudo"; fi
 if grep -qE 'vmhgfs|hgfs' /proc/mounts; then bad "a VMware shared folder is mounted"; else ok "no VMware shared folders mounted"; fi
+# The VMware backdoor and VMCI reach the hypervisor from any process; the .vmx closes
+# both (D-024). A snapshot taken before that brings them back when it is restored.
+vmci=0
+for d in /sys/bus/pci/devices/*; do
+  [[ "$(<"$d/vendor"):$(<"$d/device")" == 0x15ad:0x0740 ]] && vmci=1
+done
+if [[ $vmci -eq 0 ]]; then ok "no VMware VMCI device"; else bad "VMware VMCI device present - set vmci0.present = \"FALSE\" in the .vmx (CHECKLIST §6 step 1)"; fi
+rpc="$(timeout 10 vmware-rpctool 'info-get guestinfo.cvp-run-check' 2>&1)"
+case "$rpc" in
+  *"must be run inside a virtual machine"*|*"Failed sending message to VMware"*) ok "VMware backdoor closed" ;;
+  *) bad "VMware backdoor not shown closed (${rpc:-no output}) - set monitor_control.restrict_backdoor = \"TRUE\" in the .vmx (CHECKLIST §6 step 1)" ;;
+esac
 if pkill -u "$USER" -f 'vmtoolsd -n vmusr'; then
   warn "stopped the VMware user agent (copy/paste, drag and drop) for this login"
 fi

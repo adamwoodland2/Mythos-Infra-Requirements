@@ -407,3 +407,44 @@ falls back to 127.0.0.1 anyway, so behaviour is unchanged: nothing listens
 there and every lookup fails at once. Setting `ipv4.dns 127.0.0.1` makes the
 intent readable and gives `kali-netconfig.sh` something definite to check; it
 fails if any other nameserver appears.
+
+## D-024 VMware backdoor and VMCI closed on Kali and the targets
+
+**Date:** 2026-11-10 · **Status:** active - tested on Kali, not yet on a Windows target
+
+The escape test after a Kali rebuild found one open channel: an unprivileged
+process ran `vmware-rpctool 'info-get guestinfo....'` and the host answered.
+GuestRPC (the VMware "backdoor" I/O port, and vsock over the VMCI device)
+reaches the VMware process on the host from any guest process, with no network
+and no privileges. It isn't internet egress, but the guest can write guestinfo
+values and `vmware.log` lines on the host, and these RPC handlers have been the
+way in for past VM escapes.
+
+The Guest Isolation tick boxes only set `isolation.tools.copy/paste/dnd.disable`;
+the channel itself stays open and Workstation has no setting for it. Removing
+open-vm-tools doesn't close it either, because any process can make the
+backdoor call.
+
+- `monitor_control.restrict_backdoor = "TRUE"` stops ordinary (user-mode)
+  programs using the backdoor. VMware doesn't document it; the escape test is
+  the evidence that it works here.
+- `vmci0.present = "FALSE"` removes the VMCI device, so there's no vsock route
+  to the host either.
+- Workstation must be closed while the `.vmx` is edited, or it can write its
+  own copy back over the edit.
+- `cvp-run` refuses to start unless `vmware-rpctool` fails and there is no PCI
+  device 15ad:0740, because a snapshot keeps the VM settings it was taken with:
+  restoring one taken before the edit brings the channel back.
+
+Cost: VMware Tools in the guest can no longer reach the host. Power off and
+restart from inside the guest, and set the display resolution in the guest.
+Nothing corrects the guest clock after a suspend or after restoring a
+powered-on snapshot (Tools normally does), and wrong times would end up in
+transcripts and target logs. So snapshots are taken powered off, and a
+suspended Kali is rebooted before an engagement carries on.
+
+The targets get the same settings, since the agent gets code running on them
+by design. There it only stops ordinary programs: code in the kernel (an
+administrator loading a driver) may still use the backdoor. The gateway keeps
+both, because `cvp-export` reaches the host through a VMware shared folder, and
+the agent runs nothing there.

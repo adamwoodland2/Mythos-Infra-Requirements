@@ -8,7 +8,7 @@ How to run an engagement once the lab is built ([CHECKLIST.md](CHECKLIST.md)). D
 
 ## 1. Start an engagement
 
-1. **Restore the Kali gold snapshot** and the snapshots of the targets you'll use (VMware → VM → Snapshot → Snapshot Manager → gold → *Go To*).
+1. **Restore the Kali gold snapshot** and the snapshots of the targets you'll use (VMware → VM → Snapshot → Snapshot Manager → gold → *Go To*), then power them on.
    Expect: Kali boots to the desktop, and `cvp-scope status` shows `In-scope targets:` with nothing after it.
 2. **Check the gateway is in run mode** (gateway console).
    ```
@@ -80,7 +80,7 @@ How to run an engagement once the lab is built ([CHECKLIST.md](CHECKLIST.md)). D
 
 1. **To stop at once:** press Ctrl+C twice in Claude Code (or suspend the Kali VM in VMware).
    Expect: back at the shell; `cvp-run` syncs and prints `... synced to cvpsync@10.0.3.1:kali/`. If the time limit ran out instead, it first prints `Time limit reached - Claude Code was stopped.`
-2. **To carry on later:**
+2. **To carry on later** (if you suspended Kali, run `sudo reboot` in it first):
    ```
    cd ~/engagements/<name>
    cvp-run <hours>
@@ -160,7 +160,7 @@ What the archive holds:
 
 ## 6. Reset for the next engagement
 
-1. **Restore the Kali gold snapshot** and the target snapshots.
+1. **Restore the Kali gold snapshot** and the target snapshots, then power Kali on.
    Expect: `cvp-engagement list` no longer shows `<name>`.
 2. **Start again at §1.**
 

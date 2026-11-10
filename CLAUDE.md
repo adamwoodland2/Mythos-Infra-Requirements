@@ -16,7 +16,7 @@ Conventions:
 - British English, hyphens not dashes, $ = AUD.
 - Lab addressing: gateway 10.0.3.1, Kali 10.0.3.11, Windows targets 10.0.3.21-30
   (as many as needed; win-app-01 = .21 to win-app-10 = .30).
-- Gateway is Ubuntu Server 26.04 (Squid 7.2); interfaces ens33 = NAT, ens37 = lab.
+- Gateway is Ubuntu Server 26.04 (Squid 7.7 since the Nov 2026 update); interfaces ens33 = NAT, ens37 = lab.
 - The repo is public (so the VMs can clone it): nothing private goes in it.
 - Never add credentials, tokens or real hostnames/IPs from client environments.
 - Anthropic requirements are from the support articles linked in CHECKLIST.md
@@ -29,5 +29,7 @@ Conventions:
 - Config files are hand-written; nftables.conf and cvp-scope.nft pass `nft -c`, scripts
   pass `bash -n` and shellcheck, managed-settings.json parses. squid.conf with all three
   allow-lists passes `squid -k parse` and a loopback CONNECT test on Squid 7.2 (Ubuntu
-  26.04 package). setup-kali.sh, cvp-run and cvp-scope have not been run on Kali yet.
-  Windows targets are configured by hand (no scripts).
+  26.04 package) and runs unchanged on 7.7. setup-kali.sh, cvp-run, cvp-scope and
+  cvp-engagement have run on Kali 2026.3; cvp-run's VMware checks and cvp-scope in
+  /usr/local/bin have not yet. The .vmx backdoor settings (D-024) are tested on Kali,
+  not on a Windows target. Windows targets are configured by hand (no scripts).

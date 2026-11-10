@@ -89,7 +89,13 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    Expect: the application works and Windows Update shows nothing pending.
 2. **Download the validation script** (still on NAT): in a browser open `github.com/adamwoodland2/Mythos-Infra-Requirements`, go to `validation/validate-windows.ps1`, click *Download raw file*, and save it as `C:\validate-windows.ps1`.
    Expect: `C:\validate-windows.ps1` exists.
-3. **Shut down and move the VM into the lab** in VMware: the only adapter → LAN segment `cvp-lab`; Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*. Boot.
+3. **Shut down and move the VM into the lab.**
+   1. In VMware: the only adapter → LAN segment `cvp-lab`; Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*.
+   2. Quit VMware Workstation. In Notepad, open the VM's `.vmx` file (in the VM's folder), change `vmci0.present = "TRUE"` to `vmci0.present = "FALSE"`, add the line below, and save.
+      ```
+      monitor_control.restrict_backdoor = "TRUE"
+      ```
+   3. Start VMware Workstation and boot the VM.
 4. **Set the address** on the adapter (Settings → Network → Ethernet → IP assignment → Edit → Manual → IPv4 on): IP `10.0.3.2N` (`.21` for `win-app-01` ... `.30` for `win-app-10`), subnet mask `255.255.255.0`, gateway blank, DNS blank. IPv6 off.
    Expect: `ipconfig` shows that IPv4 address and no default gateway.
 5. **Make sure there's no proxy.**
@@ -101,9 +107,11 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    ```
    Test-NetConnection 8.8.8.8
    Test-NetConnection 10.0.3.1 -Port 3128
+   & 'C:\Program Files\VMware\VMware Tools\rpctool.exe' 'info-get guestinfo.cvp-check'
    ```
-   Expect: `PingSucceeded : False` for the first. For the second, `WARNING: TCP connect to (10.0.3.1 : 3128) failed` and `TcpTestSucceeded : False` (the gateway proxy serves Kali only), while `PingSucceeded : True` (the gateway answers pings from the lab).
-7. **Snapshot the VM** in VMware. Leave it running.
+   Expect: `PingSucceeded : False` for the first. For the second, `WARNING: TCP connect to (10.0.3.1 : 3128) failed` and `TcpTestSucceeded : False` (the gateway proxy serves Kali only), while `PingSucceeded : True` (the gateway answers pings from the lab). For the third, a line ending `must be run inside a virtual machine on a VMware hypervisor product.`
+   If the third shows `No value found`: repeat step 3 with VMware Workstation closed.
+7. **Shut the VM down and snapshot it** in VMware.
 
 ---
 
@@ -139,7 +147,14 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
 
 ## 6. Kali VM - into the lab
 
-1. **Move Kali into the lab** in VMware: adapter → LAN segment `cvp-lab` (remove any other adapter); Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*. Boot.
+1. **Move Kali into the lab.**
+   1. In VMware: adapter → LAN segment `cvp-lab` (remove any other adapter); Options → Guest Isolation → untick *drag and drop* and *copy and paste*; Options → Shared Folders → *Disabled*.
+   2. Quit VMware Workstation. In Notepad, open the VM's `.vmx` file (in the VM's folder, e.g. `Mythos Kali.vmx`), change `vmci0.present = "TRUE"` to `vmci0.present = "FALSE"`, add the line below, and save.
+      ```
+      monitor_control.restrict_backdoor = "TRUE"
+      ```
+   3. Start VMware Workstation and boot Kali.
+
    Expect: `ip -br link` shows only `lo` and `eth0`.
 2. **Run the lab setup.**
    ```
@@ -154,12 +169,19 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    curl -sI https://example.com
    curl -skI https://8.8.8.8
    curl -sI https://api.anthropic.com
+   vmware-rpctool 'info-get guestinfo.cvp-check'
+   lspci -d 15ad:0740
    ```
    Expect, in order:
    1. `Network is unreachable`
    2. `HTTP/1.1 403 Forbidden`
    3. `HTTP/1.1 403 Forbidden`
-   4. `HTTP/1.1 200 Connection established` followed by a second status line from Anthropic (any status).
+   4. `HTTP/1.1 200 Connection established` followed by a second status line from Anthropic (currently `HTTP/2 404`).
+   5. `Error: vmware-rpctool must be run inside a virtual machine on a VMware hypervisor product.`
+   6. Nothing.
+
+   If the 4th is `HTTP/1.1 403 Forbidden` with a `Via: ... (squid/...)` header: the gateway's `/etc/squid/squid.conf` was replaced by an apt upgrade. On the gateway run `sudo install -m 0644 ~/Mythos-Infra-Requirements/gateway/squid.conf /etc/squid/squid.conf` then `sudo systemctl restart squid`.
+   If the 5th is `No value found` or the 6th prints a line: repeat step 1 with VMware Workstation closed.
 5. **Check the scope firewall** (with `win-app-01` running).
    ```
    ping -c1 win-app-01
@@ -250,7 +272,7 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    Expect: every attempt fails. The gateway window shows `TCP_DENIED` or `cvp-lab-...-drop` lines, and `journalctl -k | grep cvp-scope-drop` on Kali shows the blocked lab-host attempts. Claude writes `escape-test.md` and reports which controls held.
    If anything gets out: stop, fix it, and repeat steps 5 to 6.
 7. **Keep `~/engagements/escape-test/escape-test.md`** as evidence (never in the repo).
-8. **Take the Kali gold snapshot** in VMware.
+8. **Shut Kali down, then take the Kali gold snapshot** in VMware. Delete any older Kali snapshots.
 
 ---
 
@@ -281,14 +303,14 @@ Up to ten targets: `win-app-01` = `10.0.3.21` ... `win-app-10` = `10.0.3.30`.
    ```
    sudo cvp-mode run
    ```
-   Expect: `Squid allow-list now: run`. Log out of the Kali desktop and back in, take a new Kali gold snapshot, and repeat §7 steps 4 to 8.
+   Expect: `Squid allow-list now: run`. Log out of the Kali desktop and back in, then repeat §7 steps 4 to 8 (step 8 takes the new gold snapshot).
 2. **Update Claude Code.**
    ```
    sudo cvp-mode update        # gateway
    claude update               # Kali
    sudo cvp-mode run           # gateway
    ```
-   Expect: `Squid allow-list now: update`, Claude Code reports the new version, then `Squid allow-list now: run`. Then take a new Kali gold snapshot and repeat §7 steps 4 to 8.
+   Expect: `Squid allow-list now: update`, Claude Code reports the new version, then `Squid allow-list now: run`. Then repeat §7 steps 4 to 8 (step 8 takes the new gold snapshot).
 3. **Update Kali tools:** rebuild from §5 on NAT. Don't widen the allow-list for package repos.
 4. **Patch the gateway monthly.**
    ```
